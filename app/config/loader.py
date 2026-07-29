@@ -54,6 +54,9 @@ def _build_base_config(data: Dict[str, Any], source: str) -> BaseConfig:
     return BaseConfig(
         bin_min=_require_field(data, "bin_min", source),
         bin_max=_require_field(data, "bin_max", source),
+        n_bins=_require_field(data, "n_bins", source),
+        zone_width_min_bins=_require_field(data, "zone_width_min_bins", source),
+        zone_width_max_bins=_require_field(data, "zone_width_max_bins", source),
         digit_pad=_require_field(data, "digit_pad", source),
         rr_min=_require_field(data, "rr_min", source),
         rr_max=_require_field(data, "rr_max", source),
@@ -80,7 +83,6 @@ def _build_scale_entries(data: Any, source: str) -> list:
             ScaleEntry(
                 symbol=_require_field(item, "symbol", item_source),
                 timeframe=_require_field(item, "timeframe", item_source),
-                window_size=_require_field(item, "window_size", item_source),
                 scale=_require_field(item, "scale", item_source),
             )
         )
@@ -204,7 +206,7 @@ def load_config(config_dir: str = "./config") -> AppConfig:
     )
 
 
-def get_scale(config: AppConfig, symbol: str, timeframe: str, window_size: int) -> float:
+def get_scale(config: AppConfig, symbol: str, timeframe: str) -> float:
     """
     Pre-condition: config da load thanh cong.
     Post-condition: tra ve dung scale factor khop CHINH XAC (symbol, timeframe, window_size).
@@ -214,12 +216,10 @@ def get_scale(config: AppConfig, symbol: str, timeframe: str, window_size: int) 
         if (
             entry.symbol == symbol
             and entry.timeframe == timeframe
-            and entry.window_size == window_size
         ):
             return entry.scale
     raise KeyError(
-        f"Khong tim thay ScaleEntry khop (symbol={symbol!r}, timeframe={timeframe!r}, "
-        f"window_size={window_size!r})"
+        f"Khong tim thay ScaleEntry khop (symbol={symbol!r}, timeframe={timeframe!r}"
     )
 
 

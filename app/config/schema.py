@@ -21,6 +21,9 @@ from typing import Dict, Tuple, List, Any
 class BaseConfig:
     bin_min: int
     bin_max: int
+    n_bins: int
+    zone_width_min_bins: int
+    zone_width_max_bins: int
     digit_pad: int
     rr_min: int
     rr_max: int
