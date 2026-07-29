@@ -7,7 +7,7 @@ from app.data_prepare.candle import Candle
 from app.config.loader import load_config, get_scale, get_round_config
 from app.config.schema import AppConfig, WindowConfig
 from app.data_prepare.chartcodec import ChartCodec
-from app.data_prepare.dataset_builder2 import DatasetBuilder
+from app.data_prepare.dataset_builder import DatasetBuilder
 
 def window_high(charts: List[Candle]) -> float:
     return max(c.high for c in charts)
