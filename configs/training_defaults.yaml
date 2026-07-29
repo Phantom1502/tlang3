@@ -1,0 +1,12 @@
+pretrain:
+  batch_size: 32
+  learning_rate: 0.0003
+  save_steps: 1000
+sft:
+  batch_size: 16
+  learning_rate: 0.00005
+  save_steps: 500
+grpo:
+  batch_size: 8
+  learning_rate: 0.000005
+  save_steps: 200

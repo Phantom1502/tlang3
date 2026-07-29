@@ -1,0 +1,7 @@
+bin_min: 0
+bin_max: 2047
+digit_pad: 4
+rr_min: 1
+rr_max: 9
+action_types: ["BUY", "SELL", "CANCEL_BUY", "CANCEL_SELL", "WAIT_BUY", "WAIT_SELL", "HOLD"]
+trend_values: ["UP", "DOWN", "RANGE"]
