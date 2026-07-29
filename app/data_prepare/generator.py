@@ -13,8 +13,6 @@ from app.config.schema import (
     BaseConfig,
 )
 
-LAST_N_CANDLES_TOUCH = SemanticChecker.LAST_N_CANDLES_TOUCH
-
 @dataclass
 class GeneratedSample:
     prompt: str        # "<chart>...</chart>"
@@ -70,16 +68,12 @@ class ZoneGenerator:
         if side == "support":
             lower = self._random.randint(0, current_price)
             upper = lower + width
-            
-            print(side, lower, upper, current_price, self.bin_min, self.bin_max)
             if lower < self.bin_min or upper > self.bin_max:
                 return None
             return ZoneNode(direction="support", lower_bin=lower, upper_bin=upper)
         elif side == "resistance":
             upper = self._random.randint(current_price, self.bin_max)
             lower = upper - width
-            
-            print(side, lower, upper, current_price, self.bin_min, self.bin_max)
             if lower < self.bin_min or upper > self.bin_max:
                 return None
             return ZoneNode(direction="resistance", lower_bin=lower, upper_bin=upper)
@@ -129,14 +123,12 @@ class ZoneGenerator:
             
             full_text = prompt + " " + completion
             parse_result = Parser.from_text(self.cfg,full_text).parse()
-            print(full_text, parse_result)
             if not parse_result.is_well_formed():
-                return None
+                continue
             
             sem_result = SemanticChecker(self.zone_min, self.zone_max).check(parse_result.ast)
-            print(full_text, sem_result)
             if not sem_result.passed:
-                return None
+                continue
                     
             return GeneratedSample(prompt, completion, full_text)
         

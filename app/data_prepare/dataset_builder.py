@@ -15,7 +15,7 @@ from app.config.schema import (
 from app.data_prepare.generator import ZoneGenerator
 
 def augment_shift(
-    candles: Sequence[Candle],
+    candles: List[Candle],
     rng: random.Random,
     n_bins: int,
 ) -> Optional[List[Candle]]:
@@ -34,7 +34,7 @@ def augment_shift(
         return None
 
     delta = rng.choice(choices)
-    return [(o + delta, h + delta, l + delta, c + delta) for o, h, l, c in candles]
+    return [Candle(c.open + delta, c.high + delta, c.low + delta, c.close + delta) for c in candles]
 
 class DatasetBuilder:
     def __init__(self, cfg: AppConfig, seed: Optional[int] = None) -> None:
@@ -49,6 +49,7 @@ class DatasetBuilder:
     def build_pretrain_rows(
         self,
         chart: List[Candle],
+        samples_per_chart: int = 4,
         n_augments: int = 0,
     ):
         candles_inputs: List[Candle] = chart[:self.input_candles]
@@ -60,10 +61,9 @@ class DatasetBuilder:
                 
         zone_gen : ZoneGenerator = ZoneGenerator(cfg=self.cfg, seed=self.seed)
         
-        samples = []
-        for chartsss in charts:
-            sample = zone_gen.generate_one(chartsss)
-            if sample is not None:
-                samples.append(sample)
+        samples = zone_gen.generate_dataset(
+            charts, 
+            samples_per_chart=samples_per_chart
+        )
         
-        return samples
+        return [{"prompt": s.prompt, "completion": s.completion} for s in samples]
