@@ -20,8 +20,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
-from app.lang.tokens import BIN_MAX, BIN_MIN, RR_MAX, RR_MIN
-
 # =====================================================================
 # Special tokens — id cố định để khớp LlamaConfig trong
 # docs/train_pipeline_v0.1.md mục 1.1 (pad_token_id=3, bos_token_id=1,
@@ -130,12 +128,12 @@ def build_vocab(bin_min: int, bin_max: int, rr_min: int, rr_max: int) -> Dict[st
     return vocab
 
 
-def describe_vocab() -> str:
+def describe_vocab(bin_min: int, bin_max: int, rr_min: int, rr_max: int) -> str:
     """In bảng thống kê số token mỗi nhóm — dùng để đối chiếu với bảng
     vocab trong docs/train_pipeline_v0.1.md mục 2.2 (kỳ vọng ~4146 token)."""
     lines = [f"{'special':<20} count={len(SPECIAL_TOKENS_IN_ID_ORDER)}"]
     total = len(SPECIAL_TOKENS_IN_ID_ORDER)
-    for group in _build_groups():
+    for group in _build_groups(bin_min, bin_max, rr_min, rr_max):
         lines.append(f"{group.name:<20} count={len(group.tokens)}")
         total += len(group.tokens)
     lines.append(f"{'TOTAL':<20} count={total}")
@@ -143,7 +141,11 @@ def describe_vocab() -> str:
 
 
 if __name__ == "__main__":
-    vocab = build_vocab()
-    print(describe_vocab())
+    from app.config.loader import load_config
+    from app.config.schema import AppConfig
+
+    cfg: AppConfig = load_config("configs")
+    vocab = build_vocab(cfg.base.bin_min, cfg.base.bin_max, cfg.base.rr_min, cfg.base.rr_max)
+    print(describe_vocab(cfg.base.bin_min, cfg.base.bin_max, cfg.base.rr_min, cfg.base.rr_max))
     print(f"\nlen(build_vocab()) = {len(vocab)}")
     assert len(vocab) == len(set(vocab.values())), "id bị trùng — bug trong build_vocab()"
