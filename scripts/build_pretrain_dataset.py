@@ -110,7 +110,7 @@ class ZonePretrainGen:
                 
         print(f"Thành công! Toàn bộ quá trình hoàn tất. Có tổng cộng {total_rows} dòng.")
         
-if __name__ == "__main__":
+def build_train_ds():
     output_path = "data/pretrain/zone_pretrain_train.parquet"
     inputs = [
         ("XAUUSD", "M1", "data/preprocessed/train/XAUUSD_1Min.csv"),
@@ -138,3 +138,21 @@ if __name__ == "__main__":
         n_augments=4,
         stride=10
     )
+    
+def build_val_ds():
+    output_path = "data/pretrain/zone_pretrain_val.parquet"
+    inputs = [
+        ("XAUUSD", "M1", "data/preprocessed/val/XAUUSD_1Min.csv"),
+        ("EURUSD", "M1", "data/preprocessed/val/EURUSD_1Min.csv"),
+        ("GBPUSD", "M1", "data/preprocessed/val/GBPUSD_1Min.csv"),
+    ]
+    gen = ZonePretrainGen(output_path)
+    gen.generate(
+        inputs,
+        samples_per_chart=1,
+        n_augments=4,
+        stride=10
+    )
+        
+if __name__ == "__main__":
+    build_val_ds()

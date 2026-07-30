@@ -67,7 +67,7 @@ class ModelArgs:
 MODEL_PRESETS: Dict[str, ModelArgs] = {
     "tiny":  ModelArgs(hidden_size=128, num_hidden_layers=4,  num_attention_heads=4,  num_key_value_heads=2, intermediate_size=512),
     "small": ModelArgs(hidden_size=256, num_hidden_layers=6,  num_attention_heads=8,  num_key_value_heads=4, intermediate_size=1024),
-    "base":  ModelArgs(hidden_size=512, num_hidden_layers=8,  num_attention_heads=8,  num_key_value_heads=4, intermediate_size=2048),
+    "base":  ModelArgs(hidden_size=512, num_hidden_layers=30,  num_attention_heads=8,  num_key_value_heads=4, intermediate_size=1536),
     "large": ModelArgs(hidden_size=768, num_hidden_layers=12, num_attention_heads=12, num_key_value_heads=4, intermediate_size=3072),
 }
 

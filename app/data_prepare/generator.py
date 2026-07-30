@@ -130,7 +130,8 @@ class ZoneGenerator:
             if not sem_result.passed:
                 continue
                     
-            return GeneratedSample(prompt, completion, full_text)
+            leaf_name = f"{trend}|{side}"
+            return GeneratedSample(prompt, completion, leaf_name)
         
         return None
     

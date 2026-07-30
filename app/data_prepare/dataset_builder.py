@@ -46,6 +46,8 @@ class DatasetBuilder:
         self.rng = random.Random(seed)
         self.n_bins = base_cfg.n_bins
         
+        self.zone_gen = ZoneGenerator(cfg, seed=seed)
+        
     def build_pretrain_rows(
         self,
         chart: List[Candle],
@@ -58,10 +60,8 @@ class DatasetBuilder:
             shifted = augment_shift(candles_inputs, self.rng, n_bins=self.n_bins)
             if shifted is not None:
                 charts.append(shifted)
-                
-        zone_gen : ZoneGenerator = ZoneGenerator(cfg=self.cfg, seed=self.seed)
         
-        samples = zone_gen.generate_dataset(
+        samples = self.zone_gen.generate_dataset(
             charts, 
             samples_per_chart=samples_per_chart
         )
