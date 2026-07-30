@@ -83,8 +83,6 @@ class Parser:
         TokenType.CHART_CLOSE,
         TokenType.THINK_OPEN,
         TokenType.THINK_CLOSE,
-        TokenType.ACTION_OPEN,
-        TokenType.ACTION_CLOSE,
         TokenType.EOF,
     }
 
@@ -164,6 +162,8 @@ class Parser:
 
         program = ProgramNode(chart=chart, think=think)
 
+        self._check_current_price_matches_chart(chart, think)
+        
         if not self._check(TokenType.EOF):
             self._error(f"Dư thừa token sau khi parse hết action_block: {self._current().type.name}")
 
@@ -270,6 +270,21 @@ class Parser:
 
         return think
 
+    # ------------------------------------------------------------------
+    # Bảng 2.2.C — current_price phải khớp tuyệt đối Close nến cuối
+    # ------------------------------------------------------------------
+    def _check_current_price_matches_chart(self, chart: Optional[ChartNode], think: Optional[ThinkNode]) -> None:
+        if chart is None or think is None:
+            return
+        if not chart.candles or think.current_price_bin is None:
+            return
+        real_close = chart.candles[-1].c
+        if think.current_price_bin != real_close:
+            self._error(
+                f"current_price ({think.current_price_bin}) không khớp Close nến cuối thực tế ({real_close})",
+                severity="value",  # nặng hơn lỗi cú pháp thuần tuý — phản ánh model đọc sai input
+            )
+            
     # ------------------------------------------------------------------
     # Tiện ích trích xuất giá trị từ raw token text
     # ------------------------------------------------------------------
