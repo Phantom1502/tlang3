@@ -181,6 +181,6 @@ class AppConfig:
     window: WindowConfig
     scales: List[ScaleEntry]
     models: ModelsConfig
-    training_defaults: TrainingConfig
+    training_defaults: List[TrainingConfig]
     datagen_v2: DataGenV2Config
     rounds: Dict[str, RoundConfig]

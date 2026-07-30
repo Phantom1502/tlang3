@@ -37,8 +37,6 @@ def build_arg_parser() -> argparse.ArgumentParser:
     
     return p
 def main(cfg: AppConfig) -> None:
-    train_cfg = load_train_cfg(cfg, "pretrain")
-    print(train_cfg)
     args = build_arg_parser().parse_args()
     
     import os
