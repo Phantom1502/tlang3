@@ -1,12 +1,24 @@
 pretrain:
   batch_size: 32
-  learning_rate: 0.0003
+  gradient_accumulation_steps: 16
+  learning_rate: 3e-4
+  warmup_steps: 500
+  max_steps: 10000
+  logging_steps: 100
   save_steps: 1000
 sft:
   batch_size: 16
+  gradient_accumulation_steps: 16
   learning_rate: 0.00005
+  warmup_steps: 500
+  max_steps: 10000
+  logging_steps: 100
   save_steps: 500
 grpo:
   batch_size: 8
+  gradient_accumulation_steps: 16
   learning_rate: 0.000005
+  warmup_steps: 500
+  max_steps: 10000
+  logging_steps: 100
   save_steps: 200

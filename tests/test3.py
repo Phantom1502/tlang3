@@ -60,17 +60,8 @@ except Exception as e:
 shutil.rmtree(TMP_DIR)
 
 # 4) get_scale(cfg, "XAUUSD", "M1", 100) tra dung float da ghi trong fixture
-scale_val = get_scale(cfg, "XAUUSD", "M1", 100)
-check(f"get_scale(XAUUSD,M1,100) == 24.0 (got {scale_val})", scale_val == 24.0)
-
-# 5) get_scale(cfg, "XAUUSD", "M1", 999) (window_size khong ton tai) raise KeyError
-try:
-    get_scale(cfg, "XAUUSD", "M1", 999)
-    check("get_scale window_size=999 -> raise KeyError", False)
-except KeyError:
-    check("get_scale window_size=999 -> raise KeyError", True)
-except Exception as e:
-    check(f"get_scale window_size=999 -> raise KeyError (got {type(e).__name__} instead)", False)
+scale_val = get_scale(cfg, "XAUUSD", "M1")
+check(f"get_scale(XAUUSD,M1) == 23.95 (got {scale_val})", scale_val == 23.95)
 
 # Bo sung: get_round_config
 rc = get_round_config(cfg, "round1")

@@ -34,6 +34,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--kind", choices=["pretrain_sft", "grpo"], required=True)
     p.add_argument("--split", default=None, help="Chỉ định split cụ thể để xử lý (vd: train, val). Nếu để None sẽ chạy tất cả.")
+    p.add_argument("--limit", type=int, default=None,
+        help="Chi lay ngau nhien N dong (sau shuffle) - dung cho split val lon, khong can toan bo de map ids.")
+    p.add_argument("--shuffle_seed", type=int, default=42,
+        help="Seed cho shuffle truoc khi --limit lay N dong (reproducible).")
     p.add_argument("--tokenizer_repo", default=None, help="Mặc định DEFAULT_TOKENIZER_REPO trong app/tokenizer/hub.py")
     p.add_argument("--max_length", type=int, default=512, help="Khớp MAX_POSITION_EMBEDDINGS")
     p.add_argument("--num_proc", type=int, default=4)
@@ -295,13 +299,19 @@ def main() -> None:
     from datasets import load_dataset, DatasetDict
 
     if args.split:
-        logger.info(f"Đang tải riêng lẻ split '{args.split}' từ subset 'raw'...")
-        single_ds = load_dataset(args.repo_id, name="raw", split=args.split)
+        logger.info(f"Đang tải riêng lẻ split '{args.split}'...")
+        single_ds = load_dataset(args.repo_id, split=args.split)
+        if getattr(args, "limit", None):
+            n_before = len(single_ds)
+            single_ds = single_ds.shuffle(seed=args.shuffle_seed).select(range(min(args.limit, n_before)))
+            logger.info(
+                f"Đã shuffle (seed={args.shuffle_seed}) rồi lấy {len(single_ds)}/{n_before} dòng "
+                f"(--limit={args.limit})."
+            )
         raw = DatasetDict({args.split: single_ds})
     else:
-        logger.info("Đang tải TOÀN BỘ các split từ subset 'raw'...")
-        #raw = load_dataset(args.repo_id, name="train")
-        raw = load_dataset("parquet", data_files={"train": args.repo_id})
+        logger.info("Đang tải TOÀN BỘ các split...")
+        raw = load_dataset(args.repo_id)
         if not isinstance(raw, DatasetDict):
             raw = DatasetDict({"train": raw})
 

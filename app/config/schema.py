@@ -69,7 +69,7 @@ class ModelPreset:
 
 @dataclass(frozen=True)
 class ModelsConfig:
-    tokenizer_repo: str
+    vocab_size: int
     max_position_embeddings: int
     presets: Dict[str, ModelPreset] = field(default_factory=dict)  # key: "tiny"/"small"/"base"/"large"
 
@@ -87,6 +87,34 @@ class DataGenV2Config:
                 "DataGenV2Config.n_augments_per_window phai >= 0 "
                 f"(nhan duoc {self.n_augments_per_window})"
             )
+         
+@dataclass(frozen=True)
+class TrainingConfig:
+    phase: str
+    batch_size: int
+    gradient_accumulation_steps: int
+    learning_rate: float
+    warmup_steps: int
+    max_steps: int
+    logging_steps: int
+    save_steps: int
+    
+    def __post_init__(self):
+        # Validate & convert learning_rate
+        try:
+            lr_val = float(self.learning_rate)
+            object.__setattr__(self, "learning_rate", lr_val)
+        except (ValueError, TypeError):
+            raise TypeError(f"[{self.phase}] learning_rate không thể convert sang float: {self.learning_rate!r}")
+
+        # Validate các field int
+        int_fields = ["batch_size", "gradient_accumulation_steps", "warmup_steps", "max_steps", "logging_steps", "save_steps"]
+        for field in int_fields:
+            val = getattr(self, field)
+            try:
+                object.__setattr__(self, field, int(val))
+            except (ValueError, TypeError):
+                raise TypeError(f"[{self.phase}] {field} không thể convert sang int: {val!r}")
             
 # --- T-02: RoundConfig (mo rong) + AppConfig -------------------------------------------------
 
@@ -153,6 +181,6 @@ class AppConfig:
     window: WindowConfig
     scales: List[ScaleEntry]
     models: ModelsConfig
-    training_defaults: Dict[str, Any]
+    training_defaults: TrainingConfig
     datagen_v2: DataGenV2Config
     rounds: Dict[str, RoundConfig]

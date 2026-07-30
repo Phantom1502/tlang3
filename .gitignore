@@ -9,3 +9,4 @@ app/training/model/__pycache__/
 data/preprocessed/
 app/training/data/__pycache__/
 data/pretrain/
+app/training/__pycache__/

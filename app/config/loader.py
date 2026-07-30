@@ -20,6 +20,7 @@ from app.config.schema import (
     ScaleEntry,
     ModelPreset,
     ModelsConfig,
+    TrainingConfig,
     DataGenV2Config,
     RoundConfig,
     ActionBuffConfig,
@@ -102,11 +103,33 @@ def _build_models_config(data: Dict[str, Any], source: str) -> ModelsConfig:
             intermediate_size=_require_field(preset_data, "intermediate_size", preset_source),
         )
     return ModelsConfig(
-        tokenizer_repo=_require_field(data, "tokenizer_repo", source),
+        vocab_size=_require_field(data, "vocab_size", source),
         max_position_embeddings=_require_field(data, "max_position_embeddings", source),
         presets=presets,
     )
 
+def _build_training_config(data: Dict[str, Any], source: str) -> TrainingConfig:
+    """Parse dict config thành danh sách các đối tượng TrainingConfig."""
+    if not isinstance(data, dict):
+        raise ValueError(f"Cấu hình {source} phải là một dictionary!")
+
+    train_cfgs = []
+    
+    # Lặp trực tiếp qua (phase_name, phase_cfg)
+    for phase_name, phase_cfg in data.items():
+        cfg = TrainingConfig(
+            phase=phase_name,
+            batch_size=_require_field(phase_cfg, "batch_size", phase_name),
+            gradient_accumulation_steps=_require_field(phase_cfg, "gradient_accumulation_steps", phase_name),
+            learning_rate=_require_field(phase_cfg, "learning_rate", phase_name),
+            warmup_steps=_require_field(phase_cfg, "warmup_steps", phase_name),
+            max_steps=_require_field(phase_cfg, "max_steps", phase_name),
+            logging_steps=_require_field(phase_cfg, "logging_steps", phase_name),
+            save_steps=_require_field(phase_cfg, "save_steps", phase_name),
+        )
+        train_cfgs.append(cfg)
+    
+    return train_cfgs
 
 def _build_datagen_v2_config(data: Dict[str, Any], source: str) -> DataGenV2Config:
     return DataGenV2Config(
@@ -183,10 +206,8 @@ def load_config(config_dir: str = "./config") -> AppConfig:
     window = _build_window_config(window_data, paths["window.yaml"])
     scales = _build_scale_entries(scales_data, paths["scales.yaml"])
     models = _build_models_config(models_data, paths["models.yaml"])
+    training = _build_training_config(training_defaults_data, paths["training_defaults.yaml"])
     datagen_v2 = _build_datagen_v2_config(datagen_v2_data, paths["datagen_v2.yaml"])
-
-    if not isinstance(training_defaults_data, dict):
-        raise ValueError(f"{paths['training_defaults.yaml']} phai la 1 mapping (dict)")
 
     rounds: Dict[str, RoundConfig] = {}
     for round_filename in round_files:
@@ -200,7 +221,7 @@ def load_config(config_dir: str = "./config") -> AppConfig:
         window=window,
         scales=scales,
         models=models,
-        training_defaults=training_defaults_data,
+        training_defaults=training,
         datagen_v2=datagen_v2,
         rounds=rounds,
     )
