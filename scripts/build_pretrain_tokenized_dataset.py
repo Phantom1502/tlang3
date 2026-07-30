@@ -1,34 +1,5 @@
 """
-app/data/build_tokenized_dataset.py — Map dataset raw text sang input_ids,
-rồi push lên cùng repo nhưng nằm ở subset 'ids'.
-
-Hỗ trợ tham số --split để chạy riêng lẻ từng tập dữ liệu (train/val), tránh
-chạy lại từ đầu.
-
-=== CHANGELOG (fix cho scale ~20GB) ===
-
-1. batched=True cho .map() — bản cũ gọi tokenizer 1 example/lần, bỏ phí hoàn
-   toàn khả năng batch-encode của Rust backend (`tokenizers`), chậm hơn
-   batched có thể 10-50 lần ở scale hàng chục triệu dòng. Giờ tokenize theo
-   batch_size (mặc định 1000) — encode 1 lần cho cả batch.
-
-2. TOKENIZERS_PARALLELISM=false trước khi import bất kỳ gì liên quan
-   tokenizer — tránh xung đột giữa đa luồng nội bộ của Rust tokenizer và
-   multiprocessing fork của `datasets.map(num_proc=...)`. Không set biến này
-   thì thư viện tự tắt song song ở tiến trình con kèm cảnh báo, khiến
-   num_proc>1 chỉ tốn overhead fork mà không có lợi ích gì.
-
-3. Log số sample bị mask HẾT (labels toàn -100, không đóng góp loss) — xảy
-   ra khi prompt dài gần chạm max_length khiến n_mask == len(full_ids) sau
-   khi cắt. Trước đây âm thầm bỏ qua, giờ in cảnh báo rõ số lượng.
-
-4. CẢNH BÁO CHƯA FIX ĐƯỢC BẰNG CODE — hành vi push_to_hub() khi chạy riêng
-   lẻ --split (chỉ có 1 split trong DatasetDict) có ghi đè cấu hình
-   "configs" YAML của các split khác trong cùng config_name hay không PHỤ
-   THUỘC VERSION `datasets`, KHÔNG được đảm bảo. Trước khi push thật 20GB,
-   BẮT BUỘC test trên 1 repo nhỏ: push val trước, push train sau (2 lệnh
-   riêng biệt), rồi load_dataset(repo_id, name="ids") xác nhận CẢ 2 split
-   còn nguyên trên Hub. Đừng tin giả định này khi chưa tự kiểm chứng.
+python -m scripts.build_pretrain_tokenized_dataset --repo_id data/pretrain/zone_pretrain_train.parquet --kind pretrain_sft --tokenizer_repo sullivan1502/zone-pretrain --private --ids_repo_id sullivan1502/zone-pretrain-ids-data
 """
 from __future__ import annotations
 
@@ -329,7 +300,8 @@ def main() -> None:
         raw = DatasetDict({args.split: single_ds})
     else:
         logger.info("Đang tải TOÀN BỘ các split từ subset 'raw'...")
-        raw = load_dataset(args.repo_id, name="raw")
+        #raw = load_dataset(args.repo_id, name="train")
+        raw = load_dataset("parquet", data_files={"train": args.repo_id})
         if not isinstance(raw, DatasetDict):
             raw = DatasetDict({"train": raw})
 

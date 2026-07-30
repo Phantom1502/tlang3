@@ -1,11 +1,10 @@
-file = "data/pretrain/zone_pretrain_train.parquet"
+repo = "sullivan1502/zone-pretrain-ids-data"
+from datasets import load_dataset
 
-import pandas as pd
-import pyarrow as pa
-import pyarrow.parquet as pq
+ds = load_dataset(repo, split="train")
+print(ds)
 
-table = pq.read_table(file)
-df = table.to_pandas()
-
-print(df.iloc[0]["prompt"])
-print(df.iloc[0]["completion"])
+# print a few samples
+for i in range(5):
+    print(ds[i]["input_ids"])
+    print(ds[i]["labels"])
