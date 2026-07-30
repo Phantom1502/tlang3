@@ -198,15 +198,14 @@ check(
     len(still_shared) == len(shared_with_task2),
 )
 
-# --- T11b [LEFTOVER DA BIET - NEN XOA]: PRICE_IN_ZONE/GOOD_PRICE_ACTION la 2 flag
-# THAT SU chet -- task1 khong dung (ThinkNode khong co field nay), task2 (buy/hold/sell)
-# cung khong can toi. Khac T11a, 2 token nay KHONG project nao con dung. ---
+# --- T11b: PRICE_IN_ZONE/GOOD_PRICE_ACTION -- 2 flag chet-that-su, DA XOA khoi tokens.py
+# (task1 khong dung, task2 buy/hold/sell cung khong can). Neu ai vo tinh them lai,
+# test nay se FAIL, nhac kiem tra lai co that su can dung khong. ---
 truly_dead_token_types = ["PRICE_IN_ZONE", "GOOD_PRICE_ACTION"]
 still_present_dead = [t for t in truly_dead_token_types if hasattr(TokenType, t)]
 check(
-    f"T11b [LEFTOVER DA BIET - NEN XOA]: {len(still_present_dead)}/{len(truly_dead_token_types)} "
-    f"TokenType chet-that-su van con: {still_present_dead}",
-    len(still_present_dead) == len(truly_dead_token_types),
+    f"T11b: PRICE_IN_ZONE/GOOD_PRICE_ACTION da duoc xoa khoi TokenType (con lai: {still_present_dead})",
+    len(still_present_dead) == 0,
 )
 
 # --- T12 [MAU THUAN DOCSTRING]: SemanticChecker.__init__ chi nhan 2 tham so

@@ -20,37 +20,6 @@ class SemanticResult:
 
 
 class SemanticChecker:
-    """
-    Kiểm tra bảng 2.2 (A, B, D, E) trên AST đã parse thành công.
-
-    KHÔNG kiểm tra bảng F (field bắt buộc/cấm theo action_type — đã ở
-    well-form, thuộc Parser) và KHÔNG kiểm tra mục G (good_price_action
-    không có rule nội dung, chủ ý để tránh áp đặt bias chủ quan).
-
-    Nguyên tắc: verifier này = "lật ngược" generator dùng để sinh dữ
-    liệu SFT/pretrain — generator đảm bảo đúng các invariant này lúc
-    sinh, verifier chỉ cần lật ngược logic đó thành kiểm tra.
-
-    THAY ĐỔI DUY NHẤT so với v1 (task T-05, interfaces.md § Module: app/lang):
-    4 tham số zone_width_min_bins/zone_width_max_bins/sl_min_dist_bins/sl_max_dist_bins
-    (trước đây zone_width_* là hằng số lớp có giá trị mặc định 5/20, còn
-    sl_min/max_dist_bins hoàn toàn KHÔNG tồn tại ở constructor) giờ ĐỀU BẮT BUỘC
-    truyền qua constructor, KHÔNG còn giá trị mặc định hardcode nào — đúng
-    yêu cầu contract "class này KHÔNG tự có giá trị mặc định hardcode". Caller
-    (ở v2) PHẢI truyền đủ 4 giá trị này từ RoundConfig đang active.
-
-    Lưu ý về sl_min_dist_bins/sl_max_dist_bins: LOGIC check() không dùng 2 giá
-    trị này ở bất kỳ đâu (kiểm tra SL hợp lệ, `is_sl_valid`, sống ở
-    `app/training/reward/forward_test.py`, HOÀN TOÀN TÁCH BIỆT khỏi
-    SemanticChecker — xem interfaces.md § Module: reward_func_v2.py, mục
-    "Gate riêng của task action"). Contract yêu cầu constructor nhận đủ 4 tham
-    số này (chữ ký đã "đóng băng"), nên 2 giá trị này được lưu lại làm thuộc
-    tính (self.sl_min_dist_bins/self.sl_max_dist_bins) để không mất thông tin
-    caller truyền vào, nhưng KHÔNG được dùng trong check() — giữ đúng logic v1
-    (không tự ý thêm rule SL vào semantic check, tránh lệch khỏi trách nhiệm
-    module đã phân định rõ trong interfaces.md).
-    """
-
     VIOLATION_PENALTY = 0.2       # placeholder — tinh chỉnh sau khi có dữ liệu GRPO thực nghiệm
 
     def __init__(
@@ -58,11 +27,6 @@ class SemanticChecker:
         zone_width_min_bins: int,
         zone_width_max_bins: int,
     ) -> None:
-        """
-        4 giá trị này PHẢI được truyền từ RoundConfig đang active — class này
-        KHÔNG tự có giá trị mặc định hardcode (đúng nguyên văn docstring contract
-        interfaces.md § Module: app/lang).
-        """
         self.zone_width_min_bins = zone_width_min_bins
         self.zone_width_max_bins = zone_width_max_bins
 
