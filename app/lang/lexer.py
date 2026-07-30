@@ -38,8 +38,6 @@ _TOKEN_SPEC = [
     (TokenType.ZONE_SUPPORT_CLOSE, r"</zone_support>"),
     (TokenType.ZONE_RESISTANCE_OPEN, r"<zone_resistance>"),
     (TokenType.ZONE_RESISTANCE_CLOSE, r"</zone_resistance>"),
-    (TokenType.PRICE_IN_ZONE, r"<price_in_zone>"),
-    (TokenType.GOOD_PRICE_ACTION, r"<good_price_action>"),
 
     (TokenType.ACTION_OPEN, r"<action>"),
     (TokenType.ACTION_CLOSE, r"</action>"),
