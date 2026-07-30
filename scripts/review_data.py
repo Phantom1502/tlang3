@@ -5,6 +5,6 @@ ds = load_dataset(repo, split="train")
 print(ds)
 
 # print a few samples
-for i in range(5):
+for i in range(1):
     print(ds[i]["input_ids"])
     print(ds[i]["labels"])

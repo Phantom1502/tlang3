@@ -390,7 +390,12 @@ def main() -> None:
         logger.info("[DRY RUN] Verify xong, không push lên Hub.")
         return
 
-    mapped.push_to_hub(ids_repo_id, config_name="ids", private=args.private)
+    mapped.push_to_hub(
+        ids_repo_id, 
+        config_name="ids", 
+        private=args.private,
+        max_shard_size="1GB",
+    )
     logger.info(f"Đã cập nhật thành công dữ liệu tokenize lên subset 'ids' của repo: {ids_repo_id}")
 
 
