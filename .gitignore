@@ -1,5 +1,4 @@
 app/config/__pycache__/
-data/
 tests/__pycache__/
 app/data_prepare/__pycache__/
 app/lang/__pycache__/
@@ -7,3 +6,6 @@ scripts/__pycache__/
 app/utils/__pycache__/
 app/tokenizer/__pycache__/
 app/training/model/__pycache__/
+data/preprocessed/
+app/training/data/__pycache__/
+data/pretrain/

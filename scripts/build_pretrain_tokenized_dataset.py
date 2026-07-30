@@ -300,8 +300,8 @@ def main() -> None:
         raw = DatasetDict({args.split: single_ds})
     else:
         logger.info("Đang tải TOÀN BỘ các split từ subset 'raw'...")
-        #raw = load_dataset(args.repo_id, name="train")
-        raw = load_dataset("parquet", data_files={"train": args.repo_id})
+        raw = load_dataset(args.repo_id, name="train")
+        #raw = load_dataset("parquet", data_files={"train": args.repo_id})
         if not isinstance(raw, DatasetDict):
             raw = DatasetDict({"train": raw})
 
