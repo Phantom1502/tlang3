@@ -6,18 +6,7 @@ import logging
 logger = logging.getLogger("train_pretrain")
 logging.basicConfig(level=logging.INFO, format="[%(name)s] %(message)s")
 
-from transformers import LlamaForCausalLM
-
-
-from app.config.loader import load_config
-from app.config.schema import AppConfig, TrainingConfig, ModelsConfig
-from app.training.model.model_loader import ModelLoader
-
-def load_train_cfg(cfg: AppConfig, phase: str) -> TrainingConfig:
-    for train_cfg in cfg.training_defaults:
-        if train_cfg.phase == phase:
-            return train_cfg
-    return None
+from app.config.schema import AppConfig
 
 def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -47,19 +36,15 @@ def main(cfg: AppConfig) -> None:
         raise SystemExit(1)
 
     import os
-    import torch
     
+    from app.training.model.model_loader import ModelLoader
     from transformers import Trainer, TrainingArguments
     from app.tokenizer.hub import load_tokenizer
-    from app.training.common import resolve_resume_checkpoint
+    from app.training.common import resolve_resume_checkpoint, print_device_info, load_train_cfg
     from app.training.data.data_module import DataArguments, make_data_module
     
     os.makedirs(args.output_dir, exist_ok=True)
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"Device: {device}")
-    if device == "cuda":
-        print(f"GPU : {torch.cuda.get_device_name(0)}")
-        print(f"VRAM: {torch.cuda.get_device_properties(0).total_memory/1e9:.1f}GB")
+    print_device_info()
         
     push_to_hub = False
     if args.hf_token:
@@ -132,5 +117,7 @@ def main(cfg: AppConfig) -> None:
         logger.info(f"push_to_hub tắt — checkpoint final chỉ lưu local tại {args.output_dir}")
 
 if __name__ == "__main__":
+    from app.config.loader import load_config
+    
     cfg : AppConfig = load_config("configs")
     main(cfg)

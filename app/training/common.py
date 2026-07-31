@@ -15,8 +15,26 @@ from typing import Optional
 
 logger = logging.getLogger("app.train.common")
 
+from app.config.schema import AppConfig, TrainingConfig
+
 HUB_CHECKPOINT_SUBFOLDER = "last-checkpoint"  # thư mục con mà hub_strategy="checkpoint" push vào
 
+def print_device_info():
+    import torch
+    
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"Device: {device}")
+    if device == "cuda":
+        print(f"GPU : {torch.cuda.get_device_name(0)}")
+        print(f"VRAM: {torch.cuda.get_device_properties(0).total_memory/1e9:.1f}GB")
+
+def load_train_cfg(cfg: AppConfig, phase: str) -> TrainingConfig:
+    for train_cfg in cfg.training_defaults:
+        if train_cfg.phase == phase:
+            return train_cfg
+    raise ValueError(
+        f"Không tồn tại {phase!r}. Tìm kiếm trong {cfg.training_defaults!r}."
+    )
 
 def resolve_resume_checkpoint(
     output_dir: str, checkpoint_repo: str
