@@ -22,7 +22,7 @@ from app.config.schema import (
     ModelsConfig,
     TrainingConfig,
     RoundConfig,
-    ActionBuffConfig,
+    ZoneBuffConfig,
 )
 
 # Cac file bat buoc phai co truc tiep trong config_dir (khong ke rounds/, duoc xu ly rieng).
@@ -131,11 +131,11 @@ def _build_training_config(data: Dict[str, Any], source: str) -> TrainingConfig:
     return train_cfgs
 
 def _build_round_config(data: Dict[str, Any], source: str) -> RoundConfig:
-    action_buffs_raw = _require_field(data, "action_buffs", source)
-    action_buffs = {}
-    for action_type, buff_data in action_buffs_raw.items():
-        buff_source = f"{source}.action_buffs.{action_type}"
-        action_buffs[action_type] = ActionBuffConfig(
+    zone_buffs_raw = _require_field(data, "zone_buffs", source)
+    zone_buffs = {}
+    for zone_type, buff_data in zone_buffs_raw.items():
+        buff_source = f"{source}.zone_buffs.{zone_type}"
+        zone_buffs[zone_type] = ZoneBuffConfig(
             buff_min=_require_field(buff_data, "buff_min", buff_source),
             buff_max=_require_field(buff_data, "buff_max", buff_source),
             buff_init=_require_field(buff_data, "buff_init", buff_source),
@@ -143,16 +143,8 @@ def _build_round_config(data: Dict[str, Any], source: str) -> RoundConfig:
         )
     return RoundConfig(
         round_id=_require_field(data, "round_id", source),
-        zone_width_min_bins=_require_field(data, "zone_width_min_bins", source),
-        zone_width_max_bins=_require_field(data, "zone_width_max_bins", source),
-        sl_min_dist_bins=_require_field(data, "sl_min_dist_bins", source),
-        sl_max_dist_bins=_require_field(data, "sl_max_dist_bins", source),
-        trade_fee_bins=_require_field(data, "trade_fee_bins", source),
-        SEM_FULL=_require_field(data, "SEM_FULL", source),
-        ACTION_GATE_FULL=_require_field(data, "ACTION_GATE_FULL", source),
         zone_score_weight=_require_field(data, "zone_score_weight", source),
-        entry_score_weight=_require_field(data, "entry_score_weight", source),
-        action_buffs=action_buffs,
+        zone_buffs=zone_buffs,
     )
 
 

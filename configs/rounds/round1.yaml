@@ -1,46 +1,18 @@
 round_id: round1
-zone_width_min_bins: 5
-zone_width_max_bins: 20
-sl_min_dist_bins: 5
-sl_max_dist_bins: 10
-trade_fee_bins: 0.65
-SEM_FULL: 2.0
-ACTION_GATE_FULL: 1.5
 zone_score_weight: 0.2
-entry_score_weight: 0.2
-action_buffs:
-  HOLD:
-    buff_min: -0.5
-    buff_max: 0.5
-    buff_init: 0.0
-    target_ratio: 0.1
-  BUY:
+zone_buffs:
+  NO_ZONE:
     buff_min: -0.5
     buff_max: 0.5
     buff_init: 0.0
     target_ratio: 0.2
-  SELL:
+  SUP_ZONE:
     buff_min: -0.5
     buff_max: 0.5
     buff_init: 0.0
-    target_ratio: 0.2
-  CANCEL_BUY:
+    target_ratio: 0.4
+  RES_ZONE:
     buff_min: -0.5
     buff_max: 0.5
     buff_init: 0.0
-    target_ratio: 0.1
-  CANCEL_SELL:
-    buff_min: -0.5
-    buff_max: 0.5
-    buff_init: 0.0
-    target_ratio: 0.1
-  WAIT_BUY:
-    buff_min: -0.5
-    buff_max: 0.5
-    buff_init: 0.0
-    target_ratio: 0.15
-  WAIT_SELL:
-    buff_min: -0.5
-    buff_max: 0.5
-    buff_init: 0.0
-    target_ratio: 0.15
+    target_ratio: 0.4

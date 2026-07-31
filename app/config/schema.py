@@ -100,22 +100,9 @@ class TrainingConfig:
                 object.__setattr__(self, field, int(val))
             except (ValueError, TypeError):
                 raise TypeError(f"[{self.phase}] {field} không thể convert sang int: {val!r}")
-            
-# --- T-02: RoundConfig (mo rong) + AppConfig -------------------------------------------------
-
-# Best-case sem_score khi FAIL Common gate = dung 1 violation trong toan bo A/B/B2/D/E,
-# dung lai penalty scheme san co (VIOLATION_PENALTY=0.2) => max(0, 1 - 0.2) = 0.8.
-# Nguon: reward_design_v2.md muc 4 ("Tinh cu the SEM_FULL").
-VIOLATION_PENALTY_MAX: float = 0.8
-
-# 7 action_type rieng biet cho buff v2 (KHONG gop nhom nhu v1) -- reward_design_v2.md muc 5.
-REQUIRED_ACTION_TYPES_V2: Tuple[str, ...] = (
-    "HOLD", "BUY", "SELL", "CANCEL_BUY", "CANCEL_SELL", "WAIT_BUY", "WAIT_SELL",
-)
-
 
 @dataclass(frozen=True)
-class ActionBuffConfig:
+class ZoneBuffConfig:
     """Cau hinh buff cho DUNG 1 action_type (khong gop nhom nhu v1)."""
     buff_min: float
     buff_max: float
@@ -132,32 +119,8 @@ class ActionBuffConfig:
 @dataclass(frozen=True)
 class RoundConfig:
     round_id: str
-    zone_width_min_bins: int
-    zone_width_max_bins: int
-    sl_min_dist_bins: int
-    sl_max_dist_bins: int
-    trade_fee_bins: float
-    # --- reward v2 ---
-    SEM_FULL: float
-    ACTION_GATE_FULL: float
     zone_score_weight: float
-    entry_score_weight: float
-    action_buffs: Dict[str, ActionBuffConfig]  # DU 7 muc, key trong REQUIRED_ACTION_TYPES_V2
-
-    def __post_init__(self) -> None:
-        # Invariant 1 (muc 4): worst PASS Common gate > best FAIL Common gate
-        if self.SEM_FULL <= VIOLATION_PENALTY_MAX:
-            raise ValueError(...)
-        # Invariant 2 (muc 5): worst PASS gate rieng task action > best FAIL gate rieng
-        if self.sl_min_dist_bins <= 0:
-            raise ValueError(...)
-        fee_worst = self.trade_fee_bins / self.sl_min_dist_bins
-        if self.ACTION_GATE_FULL <= 1.0 + fee_worst:
-            raise ValueError(...)
-        # R3: buff phai tach rieng DU 7 action, khong gop nhom
-        missing = set(REQUIRED_ACTION_TYPES_V2) - set(self.action_buffs.keys())
-        if missing:
-            raise ValueError(...)
+    zone_buffs: Dict[str, ZoneBuffConfig]
 
 
 @dataclass(frozen=True)

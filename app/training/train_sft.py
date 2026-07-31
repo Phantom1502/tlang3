@@ -70,7 +70,7 @@ def main(cfg: AppConfig) -> None:
         exit(1)
     resume_checkpoint = resolve_resume_checkpoint(args.output_dir, args.repo_id)
     model_loader = ModelLoader(cfg.models, args.model_size)
-    model = model_loader.build_sft_model(resume_checkpoint, args.pretrain_repo)
+    model = model_loader.build_continue_model(resume_checkpoint, args.pretrain_repo)
     
     logger.info(f"model vocab_size = {model.config.vocab_size}")
     if model.config.vocab_size != tok.vocab_size:

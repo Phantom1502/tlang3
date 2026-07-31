@@ -58,25 +58,26 @@ class ModelLoader:
         resume_checkpoint: str = None,
     ) -> LlamaForCausalLM:
         if resume_checkpoint is not None:
+            logger.info(f"Resume training from checkpoint: {resume_checkpoint}")
             return self._load_model_with_vocab_check(resume_checkpoint)
 
         return self._init_from_scratch()
     
-    def build_sft_model(
+    def build_continue_model(
         self,
         resume_checkpoint: str,
-        pretrain_repo: str,
+        source_repo: str,
     ) -> LlamaForCausalLM:
         if resume_checkpoint is not None:
+            logger.info(f"Resume training from checkpoint: {resume_checkpoint}")
             return self._load_model_with_vocab_check(resume_checkpoint)
         
         from huggingface_hub import repo_exists
-        if not repo_exists(pretrain_repo):
+        if not repo_exists(source_repo):
             raise RuntimeError(
-                f"Chưa có checkpoint SFT nào để resume, VÀ pretrain_repo {pretrain_repo!r} chưa tồn tại "
-                f"trên Hub — SFT cần checkpoint pretrain đã train xong làm nguồn init (mục 5.1). Chạy "
-                f"train_pretrain.py xong trước, hoặc truyền --pretrain_repo trỏ đúng repo đã có."
+                f"Chưa có checkpoint nào để resume, VÀ source_repo {source_repo!r} chưa tồn tại "
+                f"trên Hub — phase này cần checkpoint từ source_repo đã train xong làm nguồn init."
             )
         
-        logger.info(f"Chưa có checkpoint SFT nào — bắt đầu từ pretrain: {pretrain_repo}")
-        return self._load_model_with_vocab_check(pretrain_repo)
+        logger.info(f"Chưa có checkpoint nào — bắt đầu từ source_repo: {source_repo}")
+        return self._load_model_with_vocab_check(source_repo)
