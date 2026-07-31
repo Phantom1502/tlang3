@@ -40,8 +40,9 @@ def main(cfg: AppConfig) -> None:
     from app.training.model.model_loader import ModelLoader
     from transformers import Trainer, TrainingArguments
     from app.tokenizer.hub import load_tokenizer
-    from app.training.common import resolve_resume_checkpoint, print_device_info, load_train_cfg
+    from app.training.common import resolve_resume_checkpoint, print_device_info
     from app.training.data.data_module import DataArguments, make_data_module
+    from app.config.loader import get_train_cfg
     
     os.makedirs(args.output_dir, exist_ok=True)
     print_device_info()
@@ -83,7 +84,7 @@ def main(cfg: AppConfig) -> None:
     )
     data_module = make_data_module(tok, data_args, is_pretrain=True)
     
-    train_cfg = load_train_cfg(cfg, "pretrain")
+    train_cfg = get_train_cfg(cfg, "pretrain")
     training_args = TrainingArguments(
         output_dir=args.output_dir,
         remove_unused_columns=False,

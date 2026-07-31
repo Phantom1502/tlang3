@@ -232,6 +232,16 @@ def get_scale(config: AppConfig, symbol: str, timeframe: str) -> float:
         f"Khong tim thay ScaleEntry khop (symbol={symbol!r}, timeframe={timeframe!r}"
     )
 
+def get_train_cfg(config: AppConfig, phase: str) -> TrainingConfig:
+    """
+    Pre-condition: config da load thanh cong.
+    Post-condition: tra ve dung TrainingConfig khop phase.
+    Raises: KeyError neu phase khong ton tai.
+    """
+    for train_cfg in config.training_defaults:
+        if train_cfg.phase == phase:
+            return train_cfg
+    raise KeyError(f"Khong tim thay TrainingConfig cho phase={phase!r}")
 
 def get_round_config(config: AppConfig, round_id: str) -> RoundConfig:
     """
