@@ -36,6 +36,16 @@ def augment_shift(
     delta = rng.choice(choices)
     return [Candle(c.open + delta, c.high + delta, c.low + delta, c.close + delta) for c in candles]
 
+def render_chart_block(candles: List[Candle]) -> str:
+    """[(o,h,l,c), ...] -> '<chart> <O_x> <H_x> <L_x> <C_x> ... </chart>'
+    ĐÚNG format atomic hiện tại của grammar (app/lang/lexer.py CANDLE_O/H/L/C:
+    r"<O_\\d+>" ...) — khác hẳn format thô không ngoặc của ChartCodec."""
+    parts = ["<chart>"]
+    for candle in candles:
+        parts.extend([f"<O_{candle.open}>", f"<H_{candle.high}>", f"<L_{candle.low}>", f"<C_{candle.close}>"])
+    parts.append("</chart>")
+    return " ".join(parts)
+
 class DatasetBuilder:
     def __init__(self, cfg: AppConfig, seed: Optional[int] = None) -> None:
         self.cfg = cfg
@@ -67,3 +77,31 @@ class DatasetBuilder:
         )
         
         return [{"prompt": s.prompt, "completion": s.completion} for s in samples]
+    
+    def build_grpo_rows(
+        self,
+        chart: List[Candle],
+        symbol: str,
+        index: int,
+        n_augments: int = 0,
+    ):
+        rows: List[dict] = []
+        
+        candles_inputs: List[Candle] = chart[:self.input_candles]
+        variants: List[Tuple[str, List[Candle]]] = [(f"{symbol}_{index}", candles_inputs)]
+        for k in range(n_augments):
+            shifted = augment_shift(candles_inputs, self.rng, n_bins=self.n_bins)
+            if shifted is not None:
+                variants.append((f"{symbol}_{index}_aug{k}", shifted))
+        
+        for window_id, candles in variants:
+            input_candles = candles[:self.input_candles]
+            future_candles = candles[self.input_candles:]
+            rows.append({
+                "prompt": render_chart_block(input_candles),
+                "future_bins": [[c.open, c.high, c.low, c.close] for c in future_candles],
+                "symbol": symbol,
+                "window_id": window_id
+            })
+        
+        return rows
