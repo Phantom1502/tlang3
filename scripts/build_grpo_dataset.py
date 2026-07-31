@@ -81,7 +81,7 @@ class ZoneGRPOGen:
         
         self.schema = pa.schema([
             ("prompt", pa.string()),
-            ("future_bins", pa.list_(pa.int16())),
+            ("future_bins", pa.list_(pa.list_(pa.int16()))),
             ("symbol", pa.string()),
             ("window_id", pa.string()),
         ])

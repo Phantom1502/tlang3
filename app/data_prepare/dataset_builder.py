@@ -78,22 +78,15 @@ class DatasetBuilder:
         
         return [{"prompt": s.prompt, "completion": s.completion} for s in samples]
     
-    def build_grpo_rows(
-        self,
-        chart: List[Candle],
-        symbol: str,
-        index: int,
-        n_augments: int = 0,
-    ):
+    def build_grpo_rows(self, chart: List[Candle], symbol: str, index: int, n_augments: int = 0):
         rows: List[dict] = []
-        
-        candles_inputs: List[Candle] = chart[:self.input_candles]
-        variants: List[Tuple[str, List[Candle]]] = [(f"{symbol}_{index}", candles_inputs)]
+
+        variants: List[Tuple[str, List[Candle]]] = [(f"{symbol}_{index}", chart)]
         for k in range(n_augments):
-            shifted = augment_shift(candles_inputs, self.rng, n_bins=self.n_bins)
+            shifted = augment_shift(chart, self.rng, n_bins=self.n_bins)   # augment CẢ window (input+future)
             if shifted is not None:
                 variants.append((f"{symbol}_{index}_aug{k}", shifted))
-        
+
         for window_id, candles in variants:
             input_candles = candles[:self.input_candles]
             future_candles = candles[self.input_candles:]
@@ -101,7 +94,7 @@ class DatasetBuilder:
                 "prompt": render_chart_block(input_candles),
                 "future_bins": [[c.open, c.high, c.low, c.close] for c in future_candles],
                 "symbol": symbol,
-                "window_id": window_id
+                "window_id": window_id,
             })
-        
+
         return rows
