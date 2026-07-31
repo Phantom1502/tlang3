@@ -32,7 +32,6 @@ _REQUIRED_TOP_LEVEL_FILES = (
     "scales.yaml",
     "models.yaml",
     "training_defaults.yaml",
-    "datagen_v2.yaml",
 )
 _ROUNDS_SUBDIR = "rounds"
 
