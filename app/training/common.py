@@ -74,34 +74,3 @@ def resolve_resume_checkpoint(
 
     logger.info(f"Đã tải xong — resume từ: {downloaded_checkpoint}")
     return downloaded_checkpoint
-
-
-def load_model_with_vocab_check(source: str, vocab_size: int):
-    """
-    `LlamaForCausalLM.from_pretrained(source)` + kiểm tra vocab_size khớp
-    tokenizer hiện tại. Dùng cho CẢ 2 tình huống (khác nhau về Ý NGHĨA
-    của `source`, giống nhau về cách load + validate):
-
-    - Resume checkpoint của chính repo đang train (local path hoặc path
-      vừa tải từ `last-checkpoint/` — xem `resolve_resume_checkpoint`).
-    - Init từ checkpoint HOÀN TẤT của stage trước (vd SFT load từ
-      `<org>/trading-llm-<size>-pretrain` — model ROOT của repo đó, tức
-      bản "final" đã push lúc `trainer.push_to_hub()` cuối pretrain,
-      KHÔNG phải subfolder `last-checkpoint/` của pretrain — vì đó là
-      optimizer/scheduler state CỦA PRETRAIN, không liên quan gì tới 1
-      training run mới của SFT).
-
-    Raise ValueError nếu vocab_size lệch — vi phạm vocab contract (mục 3
-    docs/tokenizer_v0.1.md), không âm thầm train tiếp trên embedding
-    table sai kích thước.
-    """
-    from transformers import LlamaForCausalLM
-
-    model = LlamaForCausalLM.from_pretrained(source)
-    if model.config.vocab_size != vocab_size:
-        raise ValueError(
-            f"vocab_size của checkpoint tại {source!r} ({model.config.vocab_size}) KHÔNG khớp "
-            f"vocab_size tokenizer hiện tại ({vocab_size}) — vocab đã đổi từ lần train checkpoint "
-            f"này, không thể dùng an toàn (vi phạm vocab contract, xem docs/tokenizer_v0.1.md mục 3)."
-        )
-    return model

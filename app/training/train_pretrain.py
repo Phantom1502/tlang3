@@ -30,7 +30,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--max_length", type=int, default=512, help="khớp MAX_POSITION_EMBEDDINGS")
 
     p.add_argument("--hf_token", default=None, help="HF Token")
-    p.add_argument("--repo_id", default=None, help="Model Repo ID on HF Hub")
+    p.add_argument("--repo_id", required=True, help="Model Repo ID on HF Hub")
 
     p.add_argument("--fp16", dest="fp16", action="store_true", default=True)
     p.add_argument("--bf16", dest="fp16", action="store_false")
@@ -39,6 +39,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
 def main(cfg: AppConfig) -> None:
     args = build_arg_parser().parse_args()
     
+    if args.model_size not in cfg.models.presets:
+        print(
+            f"--model_size={args.model_size!r} khong co trong configs/models.yaml. "
+            f"Cac preset hop le: {sorted(cfg.models.presets.keys())}"
+        )
+        raise SystemExit(1)
+
     import os
     import torch
     
@@ -58,9 +65,8 @@ def main(cfg: AppConfig) -> None:
     if args.hf_token:
         from huggingface_hub import login
         login(token=args.hf_token)
-        if args.repo_id:
-            push_to_hub = True
-    elif args.repo_id:
+        push_to_hub = True
+    else:
         print("Có repo_id nhưng chưa có hf_token — nhớ gọi huggingface_hub.login() thủ công trước khi chạy.")
 
     # ------------------------------------------------------------
@@ -77,6 +83,12 @@ def main(cfg: AppConfig) -> None:
     model = model_loader.build_model(resume_checkpoint=resume_checkpoint)
     
     logger.info(f"model vocab_size = {model.config.vocab_size}")
+    if model.config.vocab_size != tok.vocab_size:
+        raise ValueError(
+            f"model.vocab_size ({model.config.vocab_size}) != tokenizer.vocab_size ({tok.vocab_size}) — "
+            f"configs/models.yaml.vocab_size dang lech voi tokenizer that dang dung "
+            f"(repo_id={args.repo_id!r}). Sua lai configs/models.yaml hoac kiem tra dung tokenizer_repo."
+        )
     
     data_args = DataArguments(
         dataset_name=args.dataset_name,
