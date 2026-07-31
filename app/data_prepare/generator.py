@@ -4,7 +4,7 @@ import random
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
-from app.data_prepare.candle import Candle
+from app.data_prepare.candle import Candle, render_chart_block
 from app.lang.ast_nodes import ThinkNode, ZoneNode
 from app.lang.parser import Parser
 from app.lang.semantic import SemanticChecker
@@ -90,13 +90,6 @@ class ZoneGenerator:
         
         return " ".join(parts)
 
-    def _build_chart_text(self, candles: List[Candle]) -> str:
-        parts = ["<chart>"]
-        for candle in candles:
-            parts.extend([f"<O_{candle.open}>", f"<H_{candle.high}>", f"<L_{candle.low}>", f"<C_{candle.close}>"])
-        parts.append("</chart>")
-        return " ".join(parts)
-
     def generate_one(
         self, 
         candles: List[Candle],
@@ -119,7 +112,7 @@ class ZoneGenerator:
                 think.zone = zone
         
             completion = self._build_completion_text(think)
-            prompt = self._build_chart_text(candles)
+            prompt = render_chart_block(candles)
             
             full_text = prompt + " " + completion
             parse_result = Parser.from_text(self.cfg,full_text).parse()
