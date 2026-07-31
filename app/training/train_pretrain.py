@@ -100,6 +100,7 @@ def main(cfg: AppConfig) -> None:
         hub_strategy="checkpoint" if push_to_hub else "every_save",
         save_strategy="steps",
         save_steps=train_cfg.save_steps,
+        save_total_limit=2,
         eval_strategy="steps",
         eval_steps=train_cfg.save_steps,
         report_to=[],

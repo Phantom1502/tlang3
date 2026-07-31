@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import logging
 
-logger = logging.getLogger("train_pretrain")
+logger = logging.getLogger("train_sft")
 logging.basicConfig(level=logging.INFO, format="[%(name)s] %(message)s")
 
 from app.config.schema import AppConfig
@@ -64,6 +64,9 @@ def main(cfg: AppConfig) -> None:
     # ------------------------------------------------------------
     # Model — 
     # ------------------------------------------------------------
+    if args.pretrain_repo is None:
+        print("Chưa cố checkpoint pretrain — yêu cầu set --pretrain_repo.")
+        exit(1)
     resume_checkpoint = resolve_resume_checkpoint(args.output_dir, args.repo_id)
     model_loader = ModelLoader(cfg.models, args.model_size)
     model = model_loader.build_sft_model(resume_checkpoint, args.pretrain_repo)
@@ -101,6 +104,7 @@ def main(cfg: AppConfig) -> None:
         hub_strategy="checkpoint" if push_to_hub else "every_save",
         save_strategy="steps",
         save_steps=train_cfg.save_steps,
+        save_total_limit=2,
         eval_strategy="steps",
         eval_steps=train_cfg.save_steps,
         report_to=[],
@@ -112,7 +116,7 @@ def main(cfg: AppConfig) -> None:
     trainer.save_model()
     tok.save_pretrained(args.output_dir)
     if push_to_hub:
-        trainer.push_to_hub(commit_message="Final pretrain checkpoint")
+        trainer.push_to_hub(commit_message="Final sft checkpoint")
         logger.info(f"Đã push bản final lên: https://huggingface.co/{args.repo_id}")
     else:
         logger.info(f"push_to_hub tắt — checkpoint final chỉ lưu local tại {args.output_dir}")

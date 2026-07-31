@@ -159,4 +159,4 @@ def build_val_ds():
     )
         
 if __name__ == "__main__":
-    build_val_ds()
+    build_train_ds()
