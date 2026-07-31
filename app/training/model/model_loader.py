@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import logging
+
 from transformers import LlamaForCausalLM
 from transformers import LlamaConfig
 
 from app.config.schema import ModelPreset, ModelsConfig
+
+logger = logging.getLogger("app.train.model_loader")
 
 # =====================================================================
 # Special token id — khớp app/tokenizer/vocab_builder.py
@@ -57,3 +61,22 @@ class ModelLoader:
             return self._load_model_with_vocab_check(resume_checkpoint)
 
         return self._init_from_scratch()
+    
+    def build_sft_model(
+        self,
+        resume_checkpoint: str,
+        pretrain_repo: str,
+    ) -> LlamaForCausalLM:
+        if resume_checkpoint is not None:
+            return self._load_model_with_vocab_check(resume_checkpoint)
+        
+        from huggingface_hub import repo_exists
+        if not repo_exists(pretrain_repo):
+            raise RuntimeError(
+                f"Chưa có checkpoint SFT nào để resume, VÀ pretrain_repo {pretrain_repo!r} chưa tồn tại "
+                f"trên Hub — SFT cần checkpoint pretrain đã train xong làm nguồn init (mục 5.1). Chạy "
+                f"train_pretrain.py xong trước, hoặc truyền --pretrain_repo trỏ đúng repo đã có."
+            )
+        
+        logger.info(f"Chưa có checkpoint SFT nào — bắt đầu từ pretrain: {pretrain_repo}")
+        return self._load_model_with_vocab_check(pretrain_repo)
