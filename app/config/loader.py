@@ -21,7 +21,6 @@ from app.config.schema import (
     ModelPreset,
     ModelsConfig,
     TrainingConfig,
-    DataGenV2Config,
     RoundConfig,
     ActionBuffConfig,
 )
@@ -131,13 +130,6 @@ def _build_training_config(data: Dict[str, Any], source: str) -> TrainingConfig:
     
     return train_cfgs
 
-def _build_datagen_v2_config(data: Dict[str, Any], source: str) -> DataGenV2Config:
-    return DataGenV2Config(
-        stride=_require_field(data, "stride", source),
-        n_augments_per_window=_require_field(data, "n_augments_per_window", source),
-    )
-
-
 def _build_round_config(data: Dict[str, Any], source: str) -> RoundConfig:
     action_buffs_raw = _require_field(data, "action_buffs", source)
     action_buffs = {}
@@ -200,14 +192,12 @@ def load_config(config_dir: str = "./config") -> AppConfig:
     scales_data = _read_yaml(paths["scales.yaml"])
     models_data = _read_yaml(paths["models.yaml"])
     training_defaults_data = _read_yaml(paths["training_defaults.yaml"])
-    datagen_v2_data = _read_yaml(paths["datagen_v2.yaml"])
 
     base = _build_base_config(base_data, paths["base.yaml"])
     window = _build_window_config(window_data, paths["window.yaml"])
     scales = _build_scale_entries(scales_data, paths["scales.yaml"])
     models = _build_models_config(models_data, paths["models.yaml"])
     training = _build_training_config(training_defaults_data, paths["training_defaults.yaml"])
-    datagen_v2 = _build_datagen_v2_config(datagen_v2_data, paths["datagen_v2.yaml"])
 
     rounds: Dict[str, RoundConfig] = {}
     for round_filename in round_files:
@@ -222,7 +212,6 @@ def load_config(config_dir: str = "./config") -> AppConfig:
         scales=scales,
         models=models,
         training_defaults=training,
-        datagen_v2=datagen_v2,
         rounds=rounds,
     )
 

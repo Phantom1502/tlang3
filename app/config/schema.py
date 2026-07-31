@@ -72,21 +72,6 @@ class ModelsConfig:
     vocab_size: int
     max_position_embeddings: int
     presets: Dict[str, ModelPreset] = field(default_factory=dict)  # key: "tiny"/"small"/"base"/"large"
-
-
-@dataclass(frozen=True)
-class DataGenV2Config:
-    stride: int                 # buoc nhay cua so truot -- PHAI < window_size
-    n_augments_per_window: int  # so ban augment sinh them moi cua so that
-
-    def __post_init__(self) -> None:
-        if self.stride <= 0:
-            raise ValueError(f"DataGenV2Config.stride phai > 0 (nhan duoc {self.stride})")
-        if self.n_augments_per_window < 0:
-            raise ValueError(
-                "DataGenV2Config.n_augments_per_window phai >= 0 "
-                f"(nhan duoc {self.n_augments_per_window})"
-            )
          
 @dataclass(frozen=True)
 class TrainingConfig:
@@ -182,5 +167,4 @@ class AppConfig:
     scales: List[ScaleEntry]
     models: ModelsConfig
     training_defaults: List[TrainingConfig]
-    datagen_v2: DataGenV2Config
     rounds: Dict[str, RoundConfig]
