@@ -131,7 +131,7 @@ def main(cfg: AppConfig):
     # ở docstring module về rủi ro group-by-prompt của GRPOTrainer).
     # remove_unused_columns PHẢI False (cần cả future_bins lẫn task_id).
     # ------------------------------------------------------------
-    raw = load_dataset(args.dataset_name, split=args.train_split)
+    raw = load_dataset(args.dataset_name, split=args.train_split, streaming=True)
     logger.info(f"raw dataset: {len(raw)} samples")
     
     train_cfg = get_train_cfg(cfg, "grpo")
