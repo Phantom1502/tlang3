@@ -21,4 +21,4 @@ grpo:
   warmup_steps: 500
   max_steps: 10000
   logging_steps: 10
-  save_steps: 50
+  save_steps: 500
