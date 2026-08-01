@@ -123,7 +123,7 @@ def main(cfg: AppConfig):
     stats_collector = StatsCollector.load(stats_path)
     logger.info(f"[rank={rank}] StatsCollector: nạp lại {len(stats_collector._records)} record cũ.")
     
-    buff_controller: EMABuffController = EMABuffController.load_or_init(round_config, resume_checkpoint=resume_checkpoint)
+    buff_controller: EMABuffController = EMABuffController.load_or_init(round_config, resume_checkpoint)
     
     # ------------------------------------------------------------
     # Dataset — load raw GRPO gốc rồi nhân đôi theo task_id (xem cảnh báo
