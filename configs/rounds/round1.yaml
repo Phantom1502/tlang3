@@ -1,22 +1,22 @@
 round_id: round1
-zone_score_weight: 0.2
+zone_score_weight: 0.1
 alpha: 0.1
-kp: 0.1
-kd: 0.1
-step_max: 100
+kp: 0.01
+kd: 0.01
+step_max: 0.1
 zone_buffs:
   NO_ZONE:
-    buff_min: -0.5
+    buff_min: 0.0
     buff_max: 0.5
     buff_init: 0.0
     target_ratio: 0.2
   SUP_ZONE:
-    buff_min: -0.5
+    buff_min: 0.0
     buff_max: 0.5
     buff_init: 0.0
     target_ratio: 0.4
   RES_ZONE:
-    buff_min: -0.5
+    buff_min: 0.0
     buff_max: 0.5
     buff_init: 0.0
     target_ratio: 0.4
