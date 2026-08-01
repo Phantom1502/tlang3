@@ -132,7 +132,6 @@ def main(cfg: AppConfig):
     # remove_unused_columns PHẢI False (cần cả future_bins lẫn task_id).
     # ------------------------------------------------------------
     raw = load_dataset(args.dataset_name, split=args.train_split, streaming=True)
-    logger.info(f"raw dataset: {len(raw)} samples")
     
     train_cfg = get_train_cfg(cfg, "grpo")
     
