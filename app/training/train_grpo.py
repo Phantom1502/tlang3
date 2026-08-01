@@ -182,7 +182,7 @@ def main(cfg: AppConfig):
     
     trainer = GRPOTrainer(
         model=model,
-        reward_func=tlang_reward,
+        reward_funcs=tlang_reward,
         args=training_args,
         train_dataset=raw,
         processing_class=tok,
