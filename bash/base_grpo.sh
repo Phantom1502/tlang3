@@ -18,12 +18,12 @@ python -m app.training.train_grpo \
     --model_size base \
     --source_repo "sullivan1502/base-zone-pretrain" \
     --dataset_name "sullivan1502/zone-grpo-data" \
-    --cache_dir "./cache" \
     \
     --max_completion_length 20 \
     --temperature 1.1 \
     --top_p 1.0 \
     --top_k 0 \
+    --num_generations 128 \
     \
     --output_dir "./output/base_grpo" \
     --repo_id "sullivan1502/base-zone-grpo" \

@@ -36,6 +36,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--min_p", type=float, default=0.0)
     p.add_argument("--repetition_penalty", type=float, default=1.0)
     
+    p.add_argument("--num_generations", type=int, default=12)
+    p.add_argument("--use_vllm", action="store_true", default=False)
+    
     p.add_argument("--hf_token", default=None, help="HF Token")
     p.add_argument("--repo_id", required=True, help="Model Repo ID on HF Hub")
 
