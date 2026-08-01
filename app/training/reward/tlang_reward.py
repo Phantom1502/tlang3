@@ -132,6 +132,7 @@ class TLangReward:
         buff_controller: EMABuffController,
         stats_collector: StatsCollector,
     ):
+        self.__name__ = "TLangReward"
         self.cfg = cfg
         self.round_config = round_config
         self.buff_controller = buff_controller
