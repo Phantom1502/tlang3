@@ -172,14 +172,6 @@ def measure_max_favorable_r(
     Đo R thuận lợi lớn nhất đã đạt được trước khi chạm sl_bin/hết
     outcome_horizon/chạm trần cap — hàm THUẦN TÚY, không phụ thuộc
     self.cfg (test/gọi độc lập dễ dàng).
-
-    TODO-1 (BUG — xem chi tiết ở docstring module): mọi lời gọi hàm này
-    PHẢI truyền đủ outcome_horizon/cap. Hiện `probe_zone_quality()` gọi
-    THIẾU 2 tham số này -> TypeError ngay khi có zone. Chưa fix ở đây vì
-    cần quyết định nguồn của 2 giá trị (outcome_horizon chắc chắn lấy từ
-    cfg.window.outcome_horizon; cap thì task1 không còn RR nên không thể
-    tái dùng RR_MAX như v1 — cần 1 hằng số/field config riêng cho "trần R
-    hợp lý khi đo zone quality", ví dụ 5.0 hoặc 1 field RoundConfig mới).
     """
     risk = abs(entry_bin - sl_bin)
     if risk == 0:
@@ -371,7 +363,7 @@ class TLangReward:
                 buff_applied=None
             )
             self.stats_collector.log(meta)
-            return common_result.gate_score
+            return reward
         
         
         zone_score: ZoneTaskScore = self.zone_score(program, future_bins)

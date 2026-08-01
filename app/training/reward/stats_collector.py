@@ -12,8 +12,8 @@ class TaskRolloutMeta:
     well_formed: bool
     semantic_passed: bool
     zone_type: Optional[str]         # no_zone / sup_zone / res_zone
-    zone_quality: Optional[float]
-    buff_applied: Optional[float]    # = reward_sau_buff - raw_score (để audit riêng phần buff đóng góp)
+    zone_quality: Optional[float]    # = zone_task.zone_quality
+    buff_applied: Optional[float]    # = buff (để audit riêng phần buff đóng góp)
     
 class StatsCollector:
     def __init__(self) -> None:
@@ -31,13 +31,11 @@ class StatsCollector:
         self._step_boundary = len(self._records)
 
     @staticmethod
-    def _filter_and_count(records: Sequence[TaskRolloutMeta], task_id: str, key_fn) -> Tuple[Dict[str, int], int]:
+    def _filter_and_count(records: Sequence[TaskRolloutMeta], key_fn) -> Tuple[Dict[str, int], int]:
         counts: Dict[str, int] = defaultdict(int)
         total = 0
         for r in records:
-            if r.task_id != task_id or not r.well_formed or not r.semantic_passed:
-                continue
-            if task_id == TASK_ACTION and r.task_passed is not True:
+            if not r.well_formed or not r.semantic_passed:
                 continue
             key = key_fn(r)
             if key is None:
@@ -46,13 +44,13 @@ class StatsCollector:
             total += 1
         return dict(counts), total
 
-    def counts_since_step_boundary(self, task_id: str, key_fn) -> Tuple[Dict[str, int], int]:
+    def counts_since_step_boundary(self, key_fn) -> Tuple[Dict[str, int], int]:
         """Dùng để nuôi buff — CHỈ đếm records kể từ watermark step trước."""
-        return self._filter_and_count(self._records[self._step_boundary:], task_id, key_fn)
+        return self._filter_and_count(self._records[self._step_boundary:], key_fn)
 
-    def full_history_counts(self, task_id: str, key_fn) -> Tuple[Dict[str, int], int]:
+    def full_history_counts(self, key_fn) -> Tuple[Dict[str, int], int]:
         """Dùng cho report — đếm TOÀN BỘ records kể từ lần reset() gần nhất."""
-        return self._filter_and_count(self._records, task_id, key_fn)
+        return self._filter_and_count(self._records, key_fn)
 
     def summary(self) -> Dict[str, Dict[str, dict]]:
         """
@@ -70,7 +68,7 @@ class StatsCollector:
             lambda: defaultdict(lambda: {"count": 0, "r_multiples": [], "rrs": []})
         )
         for r in self._records:
-            if r.task_id != TASK_ACTION or r.trend is None or r.action_type is None:
+            if r.trend is None:
                 continue
             if not (r.well_formed and r.semantic_passed and r.task_passed is True):
                 continue
