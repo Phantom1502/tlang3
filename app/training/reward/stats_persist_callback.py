@@ -34,6 +34,7 @@ class StatsPersistCallback(TrainerCallback):
         self.stats_collector.mark_step_boundary()
 
     def on_log(self, args, state, control, **kwargs):
+        print("\n=== ACTION BUFF CONTROLLER ===")
         for group, metrics in self.buff_controller.snapshot().items():
             print(f"{group}: ema_ratio={metrics['ema_ratio']:.4f}, buff={metrics['buff']:.4f}, prev_error={metrics['prev_error']:.4f}")
     
