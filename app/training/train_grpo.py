@@ -26,6 +26,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--output_dir", required=True)
     
     p.add_argument("--dataset_name", default=None, help="Dataset GRPO gốc (schema prompt/future_bins/symbol/window_id)")
+    p.add_argument("--train_split", default="train")
     p.add_argument("--round_id", required=True, help="round id, vd: round1")
 
     p.add_argument("--max_completion_length", type=int, default=64)
