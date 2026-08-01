@@ -221,7 +221,7 @@ class TLangReward:
     def compute_reward(self, prompt: Any, completion: str, future_bins: Sequence[Sequence[int]]) -> float:
         reward = 0.0
         
-        parse_result: ParseResult = Parser.from_text(prompt + " " + completion).parse()
+        parse_result: ParseResult = Parser.from_text(self.cfg, prompt + " " + completion).parse()
         program = parse_result.ast
         common_result: CommonGateResult = self.common_check(parse_result, program)
         reward += common_result.gate_score
