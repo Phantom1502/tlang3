@@ -1,5 +1,9 @@
 round_id: round1
 zone_score_weight: 0.2
+alpha: 0.1
+kp: 0.1
+kd: 0.1
+step_max: 100
 zone_buffs:
   NO_ZONE:
     buff_min: -0.5

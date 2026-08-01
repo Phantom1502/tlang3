@@ -102,6 +102,12 @@ class TrainingConfig:
                 raise TypeError(f"[{self.phase}] {field} không thể convert sang int: {val!r}")
 
 @dataclass(frozen=True)
+class GroupBuffState:
+    ema_ratio: float
+    buff: float
+    prev_error: float = 0.0
+    
+@dataclass(frozen=True)
 class ZoneBuffConfig:
     """Cau hinh buff cho DUNG 1 action_type (khong gop nhom nhu v1)."""
     buff_min: float
@@ -120,6 +126,10 @@ class ZoneBuffConfig:
 class RoundConfig:
     round_id: str
     zone_score_weight: float
+    alpha: float
+    kp: float
+    kd: float
+    step_max: int
     zone_buffs: Dict[str, ZoneBuffConfig]
 
 

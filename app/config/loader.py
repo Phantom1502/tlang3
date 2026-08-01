@@ -23,6 +23,7 @@ from app.config.schema import (
     TrainingConfig,
     RoundConfig,
     ZoneBuffConfig,
+    GroupBuffState,
 )
 
 # Cac file bat buoc phai co truc tiep trong config_dir (khong ke rounds/, duoc xu ly rieng).
@@ -143,6 +144,10 @@ def _build_round_config(data: Dict[str, Any], source: str) -> RoundConfig:
     return RoundConfig(
         round_id=_require_field(data, "round_id", source),
         zone_score_weight=_require_field(data, "zone_score_weight", source),
+        alpha=_require_field(data, "alpha", source),
+        kp=_require_field(data, "kp", source),
+        kd=_require_field(data, "kd", source),
+        step_max=_require_field(data, "step_max", source),
         zone_buffs=zone_buffs,
     )
 
@@ -233,6 +238,20 @@ def get_train_cfg(config: AppConfig, phase: str) -> TrainingConfig:
         if train_cfg.phase == phase:
             return train_cfg
     raise KeyError(f"Khong tim thay TrainingConfig cho phase={phase!r}")
+
+def get_buff_group(round_config: RoundConfig, group_name: str) -> GroupBuffState:
+    """
+    Pre-condition: config da load thanh cong.
+    Post-condition: tra ve dung GroupBuffState khop group_name.
+    Raises: KeyError neu group_name khong ton tai.
+    """
+    if group_name not in round_config.zone_buffs:
+        raise KeyError(f"Khong tim thay ZoneBuffConfig cho group_name={group_name!r}")
+    return GroupBuffState(
+        ema_ratio=round_config.zone_buffs[group_name].target_ratio,
+        buff=round_config.zone_buffs[group_name].buff_init,
+        prev_error=0.0
+    )
 
 def get_round_config(config: AppConfig, round_id: str) -> RoundConfig:
     """
