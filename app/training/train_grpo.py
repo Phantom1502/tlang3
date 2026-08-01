@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import glob
 import logging
 import os
 
@@ -62,7 +61,7 @@ def main(cfg: AppConfig):
         print("--repo_id và --dataset_name bắt buộc khi train thật.")
         raise SystemExit(1)
     
-    from app.config.loader import get_train_cfg
+    from app.config.loader import get_train_cfg, get_round_config
     from app.training.common import resolve_resume_checkpoint, print_device_info
     from app.tokenizer.hub import load_tokenizer
     from app.training.model.model_loader import ModelLoader
@@ -85,7 +84,7 @@ def main(cfg: AppConfig):
         print("Có repo_id nhưng chưa có hf_token — nhớ gọi huggingface_hub.login() thủ công trước khi chạy.")
 
     # TODO: Init Round here
-    round_config: RoundConfig = cfg.rounds[args.round_id]
+    round_config: RoundConfig = get_round_config(cfg, args.round_id)
     print(round_config)
         
     # ------------------------------------------------------------
@@ -106,6 +105,7 @@ def main(cfg: AppConfig):
     resume_checkpoint = resolve_resume_checkpoint(args.output_dir, args.repo_id)
     model_loader = ModelLoader(cfg.models, args.model_size)
     model = model_loader.build_continue_model(resume_checkpoint, args.source_repo)
+    model.config.use_cache = True
     
     logger.info(f"model vocab_size = {model.config.vocab_size}")
     if model.config.vocab_size != tok.vocab_size:
@@ -170,7 +170,7 @@ def main(cfg: AppConfig):
         buff_controller,
         stats_collector, 
         round_config, 
-        stats_path
+        args.output_dir
     )
     
     tlang_reward = TLangReward(
