@@ -96,7 +96,7 @@ class EMABuffController:
             return False
         
     @classmethod
-    def load_or_init(round_config: RoundConfig, resume_checkpoint: str = None) -> EMABuffController:
+    def load_or_init(cls, round_config: RoundConfig, resume_checkpoint: str = None) -> EMABuffController:
         groups = tuple(round_config.zone_buffs.keys())
         buff_controller = EMABuffController(groups=groups, namespace="zone")
 
