@@ -4,8 +4,7 @@ from dataclasses import dataclass
 from typing import Any, List, Optional, Sequence
 from enum import Enum
 
-from app.config.schema import AppConfig
-from app.config.loader import get_round_config
+from app.config.schema import AppConfig, RoundConfig
 from app.data_prepare.candle import Candle
 from app.lang.ast_nodes import ProgramNode, ZoneNode
 from app.lang.parser import Parser, ParseResult
@@ -129,12 +128,12 @@ class TLangReward:
     def __init__(
         self,
         cfg: AppConfig,
-        round_id: str,
+        round_config: RoundConfig,
         buff_controller: EMABuffController,
         stats_collector: StatsCollector,
     ):
         self.cfg = cfg
-        self.round_config = get_round_config(cfg, round_id)
+        self.round_config = round_config
         self.buff_controller = buff_controller
         self.stats_collector = stats_collector
         

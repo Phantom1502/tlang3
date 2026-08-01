@@ -172,7 +172,7 @@ def main(cfg: AppConfig):
     
     tlang_reward = TLangReward(
         cfg,
-        round_config.round_id, 
+        round_config, 
         buff_controller, 
         stats_collector
     )
