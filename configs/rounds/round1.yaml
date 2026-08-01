@@ -9,14 +9,14 @@ zone_buffs:
     buff_min: 0.0
     buff_max: 0.5
     buff_init: 0.1
-    target_ratio: 0.2
+    target_ratio: 0.4
   SUP_ZONE:
     buff_min: 0.0
     buff_max: 0.5
-    buff_init: 0.0
+    buff_init: 0.1
     target_ratio: 0.4
   RES_ZONE:
     buff_min: 0.0
     buff_max: 0.5
-    buff_init: 0.2
+    buff_init: 0.4
     target_ratio: 0.4
