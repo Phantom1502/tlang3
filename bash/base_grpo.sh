@@ -19,11 +19,11 @@ python -m app.training.train_grpo \
     --source_repo "sullivan1502/base-zone-pretrain" \
     --dataset_name "sullivan1502/zone-grpo-data" \
     \
-    --max_completion_length 20 \
+    --max_completion_length 24 \
     --temperature 1.1 \
     --top_p 1.0 \
     --top_k 0 \
-    --num_generations 32 \
+    --num_generations 16 \
     \
     --output_dir "./output/base_grpo" \
     --repo_id "sullivan1502/base-zone-grpo" \
