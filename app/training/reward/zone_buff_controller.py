@@ -38,7 +38,7 @@ class EMABuffController:
             ema_ratio = alpha * ratio + (1 - alpha) * state.ema_ratio
             
             # Error and derivative
-            error = ema_ratio - round_config.zone_buffs[group].target_ratio
+            error = round_config.zone_buffs[group].target_ratio - ema_ratio
             d_error = error - state.prev_error
             
             # Buff update
