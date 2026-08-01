@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.training.reward.zone_buff_controller import EMABuffController
+
 """
 reward.py — Reward function cho GRPO round của TASK1 (zone-inference model),
 project tách riêng khỏi task2 (buy/hold/sell).
@@ -246,12 +248,30 @@ class TLangReward:
           cách buff_controller được truyền/giữ).
     """
 
-    def __init__(self, cfg: AppConfig, round_id: str):
+    def __init__(self, cfg: AppConfig, round_id: str, buff_file_path: Optional[str] = None):
         self.cfg = cfg
         self.round_config = get_round_config(cfg, round_id)
         self.stats_collector = StatsCollector()
-        # TODO-3: self.buff_controller = ...
-        # TODO-5: self.stats = ...
+        
+        # init buff_controller
+        groups = ()
+        for zone_type, _ in self.round_config.zone_buffs.items():
+            groups += (zone_type,)
+            
+        self.buff_controller = EMABuffController(
+            groups=groups, namespace="zone"
+        )
+        if buff_file_path is not None and Path(buff_file_path).exists():
+            self.buff_controller.load(buff_file_path)
+        else:
+            self.buff_controller.init(self.round_config)
+        
+    def _get_zone_type(self, program: ProgramNode) -> str:
+        if program.think.zone is None:
+            return "NO_ZONE"
+        if program.think.zone.direction == "support":
+            return "SUP_ZONE"
+        return "RES_ZONE"
 
     def common_check(
         self,
@@ -330,8 +350,6 @@ class TLangReward:
         """
         TODO-4: thân hàm sau common gate hiện `raise NotImplementedError`.
         Việc còn lại (xem chi tiết đầy đủ ở docstring module, mục TODO-4):
-            1. Gọi self.zone_score(program, future_bins) LẤY zone_task.
-            2. Cộng buff theo nhóm HAS_ZONE/NO_ZONE (TODO-3 phải xong trước).
             3. reward = common_result.gate_score + zone_task.zone_quality + buff.
             4. Log vào stats (TODO-5) + record cho buff_controller (TODO-4,
                chọn kiểu record()-nội-bộ hay counts-truyền-ngoài, xem note
@@ -348,7 +366,6 @@ class TLangReward:
                 trend=program.think.trend,
                 well_formed=parse_result.is_well_formed(),
                 semantic_passed=False,
-                task_passed=None,
                 zone_type=None,
                 zone_quality=None,
                 buff_applied=None
@@ -358,22 +375,18 @@ class TLangReward:
         
         
         zone_score: ZoneTaskScore = self.zone_score(program, future_bins)
-        buff = 0.0  # TODO-3: get buff from self.buff_controller based on zone_score.has_zone
+        # TODO: phần này hơi hard code, nếu ko khớp với config type thì sẽ bị lỗi, nếu có giải pháp khác thì nên thay đổi
+        zone_type = self._get_zone_type(program)
+        buff = self.buff_controller.get_buff(zone_type)
         reward = reward + zone_score.zone_quality + buff
-        zone_type = "NO_ZONE"
-        if zone_score.has_zone:
-            if program.think.zone.direction == "support":
-                zone_type = "SUP_ZONE"
-            elif program.think.zone.direction == "resistance":
-                zone_type = "RES_ZONE"
+
         meta = TaskRolloutMeta(
             trend=program.think.trend,
             well_formed=True,
             semantic_passed=True,
-            task_passed=None,
             zone_type=zone_type,
             zone_quality=zone_score.zone_quality,
-            buff_applied=buff # TODO replace with actual buff applied
+            buff_applied=buff
         )
         self.stats_collector.log(meta)
         return reward

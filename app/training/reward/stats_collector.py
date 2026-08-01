@@ -11,7 +11,6 @@ class TaskRolloutMeta:
     trend: Optional[str]
     well_formed: bool
     semantic_passed: bool
-    task_passed: Optional[bool]     # None nếu task=zone, hoặc common gate đã fail
     zone_type: Optional[str]         # no_zone / sup_zone / res_zone
     zone_quality: Optional[float]
     buff_applied: Optional[float]    # = reward_sau_buff - raw_score (để audit riêng phần buff đóng góp)
