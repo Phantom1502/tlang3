@@ -1,21 +1,44 @@
-
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
-from typing import List, Optional, Dict, Tuple, Sequence, Any
-from collections import defaultdict, Counter
+import os
+from collections import Counter, defaultdict
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Sequence, Tuple
+
+
+def stats_path_for_rank(output_dir: str, round_id: str, rank: int) -> str:
+    """NGUỒN DUY NHẤT cho quy ước đặt tên file stats — dùng chung bởi cả
+    save-side (StatsPersistCallbackV2.on_save/on_train_end) LẪN load-side
+    (train_grpo.py lúc resume). KHÔNG định nghĩa lại công thức này ở nơi
+    khác — đổi 1 chỗ, mọi nơi ăn theo, tránh lệch tên file giữa lúc lưu và
+    lúc load."""
+    return os.path.join(output_dir, f"{round_id}_stats_rank{rank}.json")
+
 
 @dataclass
 class TaskRolloutMeta:
     trend: Optional[str]
     well_formed: bool
     semantic_passed: bool
-    zone_type: Optional[str]         # no_zone / sup_zone / res_zone
-    zone_quality: Optional[float]    # = zone_task.zone_quality
-    buff_applied: Optional[float]    # = buff (để audit riêng phần buff đóng góp)
-    
+    zone_type: Optional[str]         # "NO_ZONE" / "SUP_ZONE" / "RES_ZONE" — None nếu chưa pass gate
+    zone_quality: Optional[float]    # = zone_task.zone_quality (đã nhân zone_score_weight), None nếu chưa pass gate
+    buff_applied: Optional[float]    # = buff cộng theo zone_type, None nếu chưa pass gate
+
+
 class StatsCollector:
+    """
+    Nguồn DUY NHẤT cho cả report (print_summary(), gọi theo nhịp save_steps)
+    LẪN nuôi buff (counts_since_step_boundary(), gọi theo nhịp optimizer
+    step) — task1 CHỈ có 1 task (zone), không cần tham số `task_id` như
+    StatsCollectorV2 bản v2 (có 2 task zone/action).
+
+    mark_step_boundary() chỉ dịch 1 con trỏ index, KHÔNG xoá gì — reset()
+    (gọi ở on_save, cùng nhịp save_steps) mới thật sự xoá records VÀ đưa
+    watermark về 0.
+    """
+
     def __init__(self) -> None:
         self._records: List[TaskRolloutMeta] = []
         self._step_boundary: int = 0
@@ -32,6 +55,9 @@ class StatsCollector:
 
     @staticmethod
     def _filter_and_count(records: Sequence[TaskRolloutMeta], key_fn) -> Tuple[Dict[str, int], int]:
+        """CHỈ đếm record đã pass gate (well_formed + semantic_passed) —
+        khớp đúng quy ước "buff chỉ tính sau khi pass gate" đã chốt thiết
+        kế, và cũng tránh report bị nhiễu bởi completion hỏng."""
         counts: Dict[str, int] = defaultdict(int)
         total = 0
         for r in records:
@@ -54,121 +80,72 @@ class StatsCollector:
 
     def summary(self) -> Dict[str, Dict[str, dict]]:
         """
-        Breakdown chi tiết theo trend -> action_type, CHỈ cho task=action,
-        chỉ tính trên records đã pass TOÀN BỘ gate (well_formed +
-        semantic_passed + task_passed=True) — đúng quy ước report của
-        StatsCollector v1 (freq_within_trend, avg_r_multiple RAW trước
-        phí, win_rate, avg_rr, phân phối rr). Dùng field `r_multiple`
-        (raw) chứ KHÔNG dùng `outcome` (đã trừ phí, chỉ dùng để tính
-        reward) — win_rate/avg_R ở đây là số liệu P&L thô để đọc, tách
-        biệt khỏi con số dùng nội bộ để tối ưu.
+        Breakdown theo trend -> zone_type, CHỈ tính trên record đã pass gate
+        (well_formed + semantic_passed). Không có r_multiple/rr/win_rate như
+        v1/v2 (task1 không có outcome thật, chỉ có zone_quality liên tục).
         """
         by_trend_total: Dict[str, int] = defaultdict(int)
         raw: Dict[str, Dict[str, dict]] = defaultdict(
-            lambda: defaultdict(lambda: {"count": 0, "r_multiples": [], "rrs": []})
+            lambda: defaultdict(lambda: {"count": 0, "zone_qualities": [], "buffs": []})
         )
         for r in self._records:
-            if r.trend is None:
-                continue
-            if not (r.well_formed and r.semantic_passed and r.task_passed is True):
+            if r.trend is None or not (r.well_formed and r.semantic_passed) or r.zone_type is None:
                 continue
             by_trend_total[r.trend] += 1
-            entry = raw[r.trend][r.action_type]
+            entry = raw[r.trend][r.zone_type]
             entry["count"] += 1
-            if r.r_multiple is not None:
-                entry["r_multiples"].append(r.r_multiple)
-            if r.rr is not None:
-                entry["rrs"].append(r.rr)
+            if r.zone_quality is not None:
+                entry["zone_qualities"].append(r.zone_quality)
+            if r.buff_applied is not None:
+                entry["buffs"].append(r.buff_applied)
 
         result: Dict[str, Dict[str, dict]] = {}
-        for trend, actions in raw.items():
+        for trend, zone_types in raw.items():
             result[trend] = {}
             total = by_trend_total[trend]
-            for action_type, entry in actions.items():
-                rms = entry["r_multiples"]
-                rrs = entry["rrs"]
-                avg_r = sum(rms) / len(rms) if rms else None
-                win_rate = (sum(1 for x in rms if x > 0) / len(rms)) if rms else None
-                avg_rr = sum(rrs) / len(rrs) if rrs else None
-                result[trend][action_type] = {
+            for zone_type, entry in zone_types.items():
+                zqs = entry["zone_qualities"]
+                buffs = entry["buffs"]
+                result[trend][zone_type] = {
                     "count": entry["count"],
                     "freq_within_trend": entry["count"] / total if total else 0.0,
-                    "avg_r_multiple": avg_r,
-                    "win_rate": win_rate,
-                    "avg_rr": avg_rr,
-                    "rr_distribution": dict(sorted(Counter(rrs).items())) if rrs else None,
+                    "avg_zone_quality": (sum(zqs) / len(zqs)) if zqs else None,
+                    "avg_buff": (sum(buffs) / len(buffs)) if buffs else None,
                 }
         return result
 
-    def well_form_rate_by_intended_action(self) -> Dict[str, Dict[str, Any]]:
-        counts: Dict[str, Dict[str, int]] = defaultdict(lambda: {"total": 0, "well_formed": 0})
-        for r in self._records:
-            if r.intended_action_type is None:
-                continue
-            entry = counts[r.intended_action_type]
-            entry["total"] += 1
-            if r.well_formed:
-                entry["well_formed"] += 1
-        return {
-            a: {**e, "well_form_rate": (e["well_formed"] / e["total"] if e["total"] else 0.0)}
-            for a, e in counts.items()
-        }
-
     def print_summary(self) -> None:
-        print("=== [reward v2] StatsCollectorV2 summary ===")
-        for task_id in TASKS:
-            n_task = sum(1 for r in self._records if r.task_id == task_id)
-            n_wf = sum(1 for r in self._records if r.task_id == task_id and r.well_formed)
-            n_sem = sum(1 for r in self._records if r.task_id == task_id and r.well_formed and r.semantic_passed)
-            print(f"\n--- task={task_id} (n={n_task}) ---")
-            if n_task:
-                print(f"  well_form_rate = {n_wf / n_task * 100:.1f}%")
-            if n_wf:
-                print(f"  semantic_pass_rate (trong số well-formed) = {n_sem / n_wf * 100:.1f}%")
+        n = len(self._records)
+        n_wf = sum(1 for r in self._records if r.well_formed)
+        n_sem = sum(1 for r in self._records if r.well_formed and r.semantic_passed)
 
-        print("\n-- Chi tiết theo trend -> action (task=action, đã pass toàn bộ gate) --")
+        print("=== StatsCollector summary (task1 — zone) ===")
+        print(f"n_records = {n}")
+        if n:
+            print(f"well_form_rate = {n_wf / n * 100:.1f}%")
+        if n_wf:
+            print(f"semantic_pass_rate (trong số well-formed) = {n_sem / n_wf * 100:.1f}%")
+
+        print("\n-- Chi tiết theo trend -> zone_type (đã pass gate) --")
         detail = self.summary()
         if not detail:
-            print("  (chưa có mẫu nào pass gate ở task=action)")
-        for trend, actions in detail.items():
+            print("  (chưa có record nào pass gate)")
+        for trend, zone_types in detail.items():
             print(f"trend={trend}")
-            for action_type, stat in actions.items():
-                avg_r = f"{stat['avg_r_multiple']:.2f}" if stat["avg_r_multiple"] is not None else "-"
-                win_rate = f"{stat['win_rate'] * 100:.0f}%" if stat["win_rate"] is not None else "-"
-                avg_rr = f"{stat['avg_rr']:.2f}" if stat.get("avg_rr") is not None else "-"
-                line = (
-                    f"  {action_type:<12} count={stat['count']:<6} freq={stat['freq_within_trend']*100:5.1f}%  "
-                    f"avg_R={avg_r:>6}  win_rate={win_rate:>4}  avg_RR={avg_rr:>5}"
+            for zone_type, stat in zone_types.items():
+                avg_zq = f"{stat['avg_zone_quality']:.3f}" if stat["avg_zone_quality"] is not None else "-"
+                avg_buff = f"{stat['avg_buff']:.3f}" if stat["avg_buff"] is not None else "-"
+                print(
+                    f"  {zone_type:<10} count={stat['count']:<6} freq={stat['freq_within_trend']*100:5.1f}%  "
+                    f"avg_zone_quality={avg_zq:>7}  avg_buff={avg_buff:>7}"
                 )
-                dist = stat.get("rr_distribution")
-                if dist:
-                    dist_str = " ".join(f"{k}:{v}" for k, v in dist.items())
-                    line += f"  rr_dist=[{dist_str}]"
-                print(line)
 
-        print("\n-- Action group counts (7 nhóm, toàn bộ lịch sử từ lần reset gần nhất) --")
-        action_counts, action_total = self.full_history_counts(TASK_ACTION, key_fn=lambda r: r.action_type)
-        for g in GROUPS_ACTION:
-            n = action_counts.get(g, 0)
-            ratio = n / action_total if action_total else 0.0
-            print(f"  {g:<12} count={n:<6} ratio={ratio * 100:5.1f}%")
-
-        print("\n-- Zone group counts (HAS_ZONE/NO_ZONE) --")
-        zone_counts, zone_total = self.full_history_counts(
-            TASK_ZONE,
-            key_fn=lambda r: "HAS_ZONE" if r.has_zone else ("NO_ZONE" if r.has_zone is False else None),
-        )
-        for g in GROUPS_ZONE:
-            n = zone_counts.get(g, 0)
-            ratio = n / zone_total if zone_total else 0.0
-            print(f"  {g:<12} count={n:<6} ratio={ratio * 100:5.1f}%")
-
-        print("\n-- Well-form rate theo Ý ĐỊNH action (kể cả parse fail) --")
-        for action, stat in sorted(self.well_form_rate_by_intended_action().items()):
-            print(
-                f"  {action:<12} total={stat['total']:<6} well_formed={stat['well_formed']:<6} "
-                f"rate={stat['well_form_rate'] * 100:5.1f}%"
-            )
+        print("\n-- Zone_type counts (toàn bộ lịch sử từ lần reset gần nhất, đã pass gate) --")
+        zone_counts, zone_total = self.full_history_counts(key_fn=lambda r: r.zone_type)
+        for zone_type in sorted(zone_counts.keys()):
+            n_zt = zone_counts[zone_type]
+            ratio = n_zt / zone_total if zone_total else 0.0
+            print(f"  {zone_type:<10} count={n_zt:<6} ratio={ratio * 100:5.1f}%")
 
     def to_list(self) -> List[dict]:
         return [asdict(r) for r in self._records]
@@ -179,18 +156,17 @@ class StatsCollector:
         p.write_text(json.dumps({"records": self.to_list()}, ensure_ascii=False), encoding="utf-8")
 
     @classmethod
-    def load(cls, path: str) -> "StatsCollectorV2":
+    def load(cls, path: str) -> "StatsCollector":
         collector = cls()
         p = Path(path)
         if p.exists():
             data = json.loads(p.read_text(encoding="utf-8"))
             for d in data.get("records", []):
-                d.setdefault("r_multiple", None)   # tương thích ngược file stats cũ chưa có field này
                 collector.log(TaskRolloutMeta(**d))
         return collector
 
     @classmethod
-    def merge_from_files(cls, paths) -> "StatsCollectorV2":
+    def merge_from_files(cls, paths) -> "StatsCollector":
         collector = cls()
         for path in paths:
             p = Path(path)
@@ -198,6 +174,5 @@ class StatsCollector:
                 continue
             data = json.loads(p.read_text(encoding="utf-8"))
             for d in data.get("records", []):
-                d.setdefault("r_multiple", None)   # tương thích ngược file stats cũ chưa có field này
                 collector.log(TaskRolloutMeta(**d))
         return collector

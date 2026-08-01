@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Chạy 1 lần trước, không nằm trong script:
+#   huggingface-cli login   # hoặc: export HF_TOKEN=hf_xxx
+
+# --- Tính toán config trước khi chạy (đổi batch/GPU thì PHẢI tính lại max_steps) ---
+#   per_device_train_batch_size = 128
+#   gradient_accumulation_steps = 32
+#   effective_batch_size        = 128 * 32 = 4096 samples/step
+#   max_steps                   = 7000
+#   total_samples_seen          = 7000 * 4096 ≈ 28.7M samples (~1 epoch trên dataset 30M docs)
+#   ETA thực đo                 = ~25.6s/it * 7000 ≈ 49.7h (khớp num_train_epochs=1)
+
+
+python -m app.training.train_grpo \
+    --round_id round1 \
+    --model_size base \
+    --source_repo "sullivan1502/base-zone-pretrain" \
+    --dataset_name "sullivan1502/zone-grpo-data" \
+    --cache_dir "./cache" \
+    \
+    --max_completion_length 20 \
+    --temperature 1.1 \
+    --top_p 1.0 \
+    --top_k 0 \
+    \
+    --output_dir "./output/base_grpo" \
+    --repo_id "sullivan1502/base-zone-grpo" \
+    --hf_token "$HF_TOKEN" \
+    \
+    --fp16 \

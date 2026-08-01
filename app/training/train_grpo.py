@@ -8,7 +8,7 @@ import os
 logger = logging.getLogger("train_grpo")
 logging.basicConfig(level=logging.INFO, format="[%(name)s] %(message)s")
 
-from app.config.schema import AppConfig
+from app.config.schema import AppConfig, RoundConfig
 
 def _seed_from_round_id(round_id: str) -> int:
     import hashlib
@@ -28,6 +28,14 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--dataset_name", default=None, help="Dataset GRPO gốc (schema prompt/future_bins/symbol/window_id)")
     p.add_argument("--round_id", required=True, help="round id, vd: round1")
 
+    p.add_argument("--max_completion_length", type=int, default=64)
+
+    p.add_argument("--temperature", type=float, default=1.1)
+    p.add_argument("--top_p", type=float, default=1.0)
+    p.add_argument("--top_k", type=int, default=0)
+    p.add_argument("--min_p", type=float, default=0.0)
+    p.add_argument("--repetition_penalty", type=float, default=1.0)
+    
     p.add_argument("--hf_token", default=None, help="HF Token")
     p.add_argument("--repo_id", required=True, help="Model Repo ID on HF Hub")
 
@@ -56,7 +64,10 @@ def main(cfg: AppConfig):
     from app.training.model.model_loader import ModelLoader
     from datasets import load_dataset
     from trl import GRPOConfig, GRPOTrainer
-    from transformers import TrainerCallback
+    from app.training.reward.tlang_reward import TLangReward
+    from app.training.reward.stats_collector import StatsCollector, stats_path_for_rank
+    from app.training.reward.zone_buff_controller import EMABuffController
+    from app.training.reward.stats_persist_callback import StatsPersistCallback
         
     os.makedirs(args.output_dir, exist_ok=True)
     print_device_info()
@@ -70,10 +81,10 @@ def main(cfg: AppConfig):
         print("Có repo_id nhưng chưa có hf_token — nhớ gọi huggingface_hub.login() thủ công trước khi chạy.")
 
     # TODO: Init Round here
-    round_config = cfg.rounds[args.round_id]
+    round_config: RoundConfig = cfg.rounds[args.round_id]
     print(round_config)
         
-        # ------------------------------------------------------------
+    # ------------------------------------------------------------
     # Tokenizer — giống hệt v1 (xem giải thích add_eos_token/add_bos_token
     # quirk trong train_grpo.py v1, không lặp lại).
     # ------------------------------------------------------------
@@ -100,7 +111,24 @@ def main(cfg: AppConfig):
             f"(repo_id={args.repo_id!r}). Sua lai configs/models.yaml hoac kiem tra dung tokenizer_repo."
         )
     
+    # ------------------------------------------------------------
+    # StatsCollector — load lại records đã dump của round này (nếu Colab
+    # bị ngắt và đây là lần chạy lại) TRƯỚC khi log tiếp.
+    # ------------------------------------------------------------
+    rank = int(os.environ.get("RANK", os.environ.get("LOCAL_RANK", "0")))
+    stats_path = stats_path_for_rank(args.output_dir, args.round_id, rank=rank)
+    stats_collector = StatsCollector.load(stats_path)
+    logger.info(f"[rank={rank}] StatsCollector: nạp lại {len(stats_collector._records)} record cũ.")
+    
+    buff_controller: EMABuffController = EMABuffController.load_or_init(round_config, resume_checkpoint=resume_checkpoint)
+    
+    # ------------------------------------------------------------
+    # Dataset — load raw GRPO gốc rồi nhân đôi theo task_id (xem cảnh báo
+    # ở docstring module về rủi ro group-by-prompt của GRPOTrainer).
+    # remove_unused_columns PHẢI False (cần cả future_bins lẫn task_id).
+    # ------------------------------------------------------------
     raw = load_dataset(args.dataset_name, split=args.train_split)
+    logger.info(f"raw dataset: {len(raw)} samples")
     
     train_cfg = get_train_cfg(cfg, "grpo")
     
@@ -108,13 +136,12 @@ def main(cfg: AppConfig):
         output_dir=args.output_dir,
         seed=_seed_from_round_id(args.round_id),
         remove_unused_columns=False,
-        per_device_train_batch_size=args.per_device_train_batch_size,
-        gradient_accumulation_steps=args.gradient_accumulation_steps,
-        learning_rate=args.learning_rate,
-        warmup_ratio=args.warmup_ratio,
-        max_steps=args.max_steps,
-        num_train_epochs=args.num_train_epochs,
-        logging_steps=args.logging_steps,
+        per_device_train_batch_size=train_cfg.batch_size,
+        gradient_accumulation_steps=train_cfg.gradient_accumulation_steps,
+        learning_rate=train_cfg.learning_rate,
+        warmup_steps=train_cfg.warmup_steps,
+        max_steps=train_cfg.max_steps,
+        logging_steps=train_cfg.logging_steps,
         max_completion_length=args.max_completion_length,
 
         temperature=args.temperature,
@@ -131,14 +158,50 @@ def main(cfg: AppConfig):
         hub_model_id=args.repo_id if push_to_hub else None,
         hub_strategy="checkpoint" if push_to_hub else "every_save",
         save_strategy="steps",
-        save_steps=args.save_steps,
-        save_total_limit=args.save_total_limit,
+        save_steps=train_cfg.save_steps,
+        save_total_limit=2,
         report_to=[],
     )
     
+    stats_persist_callback = StatsPersistCallback(
+        buff_controller,
+        stats_collector, 
+        round_config, 
+        stats_path
+    )
     
-    pass
+    tlang_reward = TLangReward(
+        cfg,
+        round_config.round_id, 
+        buff_controller, 
+        stats_collector
+    )
+    
+    trainer = GRPOTrainer(
+        model=model,
+        reward_func=tlang_reward,
+        args=training_args,
+        train_dataset=raw,
+        processing_class=tok,
+        callbacks=[stats_persist_callback],
+    )
+    
+    trainer.train(resume_from_checkpoint=resume_checkpoint)
+    
+    trainer.save_model()
+    canonical_tok = load_tokenizer(repo_id=args.repo_id, allow_local_fallback=False)
+    canonical_tok.save_pretrained(args.output_dir)
+    buff_controller.save(os.path.join(args.output_dir, "zone_buff_state.json"))
+    stats_collector.save(stats_path)
 
+    if push_to_hub:
+        trainer.push_to_hub(commit_message=f"GRPO v2 {args.round_id} checkpoint")
+        logger.info(f"Đã push lên: https://huggingface.co/{args.repo_id}")
+
+    if trainer.is_world_process_zero():
+        print(f"\n=== Report round {args.round_id} (rank {rank} — chạy lại với --report_only để gộp mọi rank) ===")
+        stats_collector.print_summary()
+        
 if __name__ == "__main__":
     from app.config.loader import load_config
     

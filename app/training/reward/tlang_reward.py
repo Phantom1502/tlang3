@@ -1,120 +1,17 @@
 from __future__ import annotations
 
-from app.training.reward.zone_buff_controller import EMABuffController
-
-"""
-reward.py — Reward function cho GRPO round của TASK1 (zone-inference model),
-project tách riêng khỏi task2 (buy/hold/sell).
-
-THIẾT KẾ TỔNG QUAN (nháp, viết ra để nhớ lúc quay lại code tiếp):
-
-    Grammar task1 CHỈ còn chart_block + think_block (trend, current_price,
-    zone) — KHÔNG có action/SL/RR (đã xác nhận ở app/lang review trước đó).
-    Vì vậy reward ở đây CHỈ có 1 "task" duy nhất (không cần tách zone/action
-    như reward_func_v2.py bản v1) — bản này là bản RÚT GỌN của thiết kế v2,
-    bỏ hẳn action_task + action_buff_controller + rr_entropy_controller
-    (những cái đó thuộc project task2 riêng).
-
-    2 tầng, giống tinh thần v1/v2 (xem app/training/reward/reward_func_v2.py
-    cũ để đối chiếu, dù bản đó có thêm action task không áp dụng ở đây):
-
-    Tầng 1 — Common gate (ĐÃ XONG, xem common_check()):
-        well_formed (Parser) AND semantic_passed (SemanticChecker: A/B/B2).
-        Fail bất kỳ cái nào -> trả thẳng gate_score (điểm liên tục, KHÔNG
-        raw 0/1) — reward thưa dần theo số lỗi, không phải nhị phân.
-
-    Tầng 2 — Zone quality (ĐANG LÀM DỞ, xem zone_score()):
-        Nếu pass gate: đo "nếu đặt lệnh NGAY TẠI biên zone (upper cho
-        support/lower cho resistance) thì đi được bao xa thuận lợi trước khi
-        bị SL" — probe_zone_quality(). Đây là tín hiệu "zone có đáng để
-        task2 sau này vào lệnh khi giá chạm hay không", KHÔNG phải reward
-        cho 1 lệnh thật (task1 không sinh action).
-
-    CÒN THIẾU (xem TODO rải trong code bên dưới, tổng hợp lại đây cho dễ
-    nhìn tổng thể trước khi đi vào chi tiết từng hàm):
-
-        [ ] TODO-1 (BUG, ưu tiên cao nhất — xem docstring measure_max_favorable_r):
-            probe_zone_quality() gọi measure_max_favorable_r() THIẾU
-            outcome_horizon/cap -> TypeError ngay khi có zone. Phải quyết
-            định nguồn 2 giá trị này (cfg.window.outcome_horizon là ứng viên
-            rõ ràng cho outcome_horizon; cap thì task1 không có RR nên
-            KHÔNG thể tái dùng ENTRY_QUALITY_CAP=RR_MAX như v1 — cần 1 hằng
-            số/field RoundConfig riêng, ví dụ zone_quality_cap trong round
-            config, hoặc 1 constant cố định kiểu ZONE_QUALITY_CAP=hardcode).
-
-        [ ] TODO-2: RoundConfig cho task1 — CHƯA TỒN TẠI. Cần tối thiểu:
-            - zone_width_min_bins/zone_width_max_bins (đã có trong
-              AppConfig.base, có thể dùng thẳng KHÔNG cần round riêng, vì
-              task1 không có "nới/siết zone theo round" như task2 — xác
-              nhận lại: có cần round-over-round đổi zone_width không, hay
-              zone_width cố định suốt task1 training?).
-            - zone_quality_cap (xem TODO-1).
-            - buff cho 2 nhóm HAS_ZONE / NO_ZONE (xem TODO-3) — target_ratio,
-              buff_min/max/init, PD params (kp/kd/step_max/ema_alpha) —
-              y hệt cấu trúc zone namespace trong round_config_v2.py cũ,
-              chỉ bỏ hẳn phần action.
-
-        [ ] TODO-3: Buff controller cho tỉ lệ HAS_ZONE/NO_ZONE — CHƯA VIẾT.
-            RANGE-không-zone vẫn là 1 output hợp lệ (giống ý nghĩa HOLD ở
-            v1) — cần 1 EMA+PD controller y hệt EMABuffControllerV2 (namespace
-            "zone", 2 group) để giữ tỉ lệ HAS_ZONE/NO_ZONE không suy biến
-            (model đổ xô sinh toàn RANGE-không-zone vì dễ pass gate hơn, hay
-            ngược lại). Có thể tái dùng thẳng
-            app/training/reward/buff_controller_v2.py (đã viết, tổng quát
-            theo namespace) thay vì viết lại — CHỈ cần define GROUPS_ZONE =
-            ("HAS_ZONE", "NO_ZONE") và RoundConfig tương ứng.
-
-        [ ] TODO-4: compute_reward() — thân hàm sau common gate hiện
-            `raise NotImplementedError`. Cần:
-                zone_task = self.zone_score(program, future_bins)
-                buffed = zone_task.zone_quality + buff_controller.get_buff(
-                    "HAS_ZONE" if zone_task.has_zone else "NO_ZONE"
-                )
-                reward = common_result.gate_score + buffed
-                buff_controller.record(...)  # nếu dùng kiểu record-based như v1,
-                                              # hoặc dùng counts-based như v2
-                                              # (StatsCollectorV2.counts_since_step_boundary)
-                -- CHỌN 1 TRONG 2 KIỂU ĐẾM (record() nội bộ như v1 EMABuffController,
-                hay counts truyền ngoài như v2 EMABuffControllerV2) — xem lại
-                2 file cũ để chọn, ĐỪNG trộn 2 kiểu.
-
-        [ ] TODO-5: RolloutRecord/StatsCollector (hoặc tương đương) — CHƯA CÓ.
-            Cần tối thiểu để report được: trend, has_zone, well_formed,
-            semantic_passed, zone_quality, reward — dùng để debug/theo dõi
-            tỉ lệ HAS_ZONE/NO_ZONE + phân phối zone_quality qua các step,
-            giống StatsCollectorV2.print_summary() bản v1 (bỏ phần action).
-
-        [ ] TODO-6: __call__() hiện chưa log gì vào StatsCollector, chưa gọi
-            buff_controller.record()/on_step_end() ở đâu cả (on_step_end nên
-            nằm ở TrainerCallback bên train_grpo.py, giống pattern v1 —
-            KHÔNG gọi trong __call__ vì __call__ chạy nhiều lần/step, còn
-            on_step_end chỉ nên chạy đúng 1 lần/step).
-
-        [ ] TODO-7 (nhỏ, để ý sau): common_check() khi passed=True luôn trả
-            gate_score = semantic_result.score + parse_result.well_form_score()
-            — nhưng passed=True chỉ xảy ra khi CẢ 2 đều pass (0 lỗi), nghĩa
-            là 2 score này LUÔN đúng bằng 1.0 mỗi cái -> gate_score khi pass
-            LUÔN đúng bằng 2.0 cố định, không cần cộng runtime. Có thể thay
-            bằng hằng số (rõ ràng hơn, đỡ tính lại vô ích) hoặc giữ nguyên
-            cho code tự-document — không phải bug, chỉ là 1 cách viết khác.
-"""
-
-import json
-import math
-import re
-from collections import Counter, defaultdict
-from dataclasses import asdict, dataclass
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from dataclasses import dataclass
+from typing import Any, List, Optional, Sequence
 from enum import Enum
 
-from app.config.schema import AppConfig, RoundConfig
+from app.config.schema import AppConfig
 from app.config.loader import get_round_config
 from app.data_prepare.candle import Candle
 from app.lang.ast_nodes import ProgramNode, ZoneNode
 from app.lang.parser import Parser, ParseResult
 from app.lang.semantic import SemanticChecker, SemanticResult
 from app.training.reward.stats_collector import StatsCollector, TaskRolloutMeta
+from app.training.reward.zone_buff_controller import EMABuffController
 
 # Số bin đệm giữa SL "giả lập" và mép zone khi probe chất lượng zone — SL đặt
 # NGAY SÁT ngoài zone (mép đối diện với entry) để mô phỏng "vào lệnh ngay khi
@@ -227,36 +124,19 @@ class TLangReward:
     """
     Reward function cho GRPO round của task1 — dùng làm `reward_funcs` cho
     GRPOTrainer (trl), qua __call__(prompts, completions, future_bins, ...).
-
-    TODO-3/TODO-5: __init__ hiện chỉ giữ self.cfg — CẦN THÊM:
-        - self.buff_controller: EMABuffControllerV2(groups=("HAS_ZONE","NO_ZONE"), namespace="zone")
-          (tái dùng app/training/reward/buff_controller_v2.py, không viết lại).
-          Phải seed_from_round_config() hoặc load() từ checkpoint TRƯỚC khi
-          train (làm ở train_grpo.py, giống pattern v1 — KHÔNG tự seed
-          trong __init__ ở đây vì __init__ không biết đang resume hay round mới).
-        - self.stats: StatsCollector-kiểu-rút-gọn (chỉ cần trend/has_zone/
-          zone_quality/reward, xem TODO-5) — optional param truyền vào
-          __call__ hoặc giữ làm attribute, CHỌN 1 TRONG 2 (đồng nhất với
-          cách buff_controller được truyền/giữ).
     """
 
-    def __init__(self, cfg: AppConfig, round_id: str, buff_file_path: Optional[str] = None):
+    def __init__(
+        self,
+        cfg: AppConfig,
+        round_id: str,
+        buff_controller: EMABuffController,
+        stats_collector: StatsCollector,
+    ):
         self.cfg = cfg
         self.round_config = get_round_config(cfg, round_id)
-        self.stats_collector = StatsCollector()
-        
-        # init buff_controller
-        groups = ()
-        for zone_type, _ in self.round_config.zone_buffs.items():
-            groups += (zone_type,)
-            
-        self.buff_controller = EMABuffController(
-            groups=groups, namespace="zone"
-        )
-        if buff_file_path is not None and Path(buff_file_path).exists():
-            self.buff_controller.load(buff_file_path)
-        else:
-            self.buff_controller.init(self.round_config)
+        self.buff_controller = buff_controller
+        self.stats_collector = stats_collector
         
     def _get_zone_type(self, program: ProgramNode) -> str:
         if program.think.zone is None:
@@ -338,15 +218,7 @@ class TLangReward:
             has_zone=True,
         )
 
-    def compute_reward(self, prompt: Any, completion: str, future_bins: Sequence[Sequence[int]], **kwargs) -> float:
-        """
-        TODO-4: thân hàm sau common gate hiện `raise NotImplementedError`.
-        Việc còn lại (xem chi tiết đầy đủ ở docstring module, mục TODO-4):
-            3. reward = common_result.gate_score + zone_task.zone_quality + buff.
-            4. Log vào stats (TODO-5) + record cho buff_controller (TODO-4,
-               chọn kiểu record()-nội-bộ hay counts-truyền-ngoài, xem note
-               trong TODO-4 ở docstring module — ĐỪNG trộn 2 kiểu).
-        """
+    def compute_reward(self, prompt: Any, completion: str, future_bins: Sequence[Sequence[int]]) -> float:
         reward = 0.0
         
         parse_result: ParseResult = Parser.from_text(prompt + " " + completion).parse()
@@ -355,7 +227,7 @@ class TLangReward:
         reward += common_result.gate_score
         if not common_result.passed:
             meta = TaskRolloutMeta(
-                trend=program.think.trend,
+                trend=program.think.trend if program.think else None,
                 well_formed=parse_result.is_well_formed(),
                 semantic_passed=False,
                 zone_type=None,
@@ -373,7 +245,7 @@ class TLangReward:
         reward = reward + zone_score.zone_quality + buff
 
         meta = TaskRolloutMeta(
-            trend=program.think.trend,
+            trend=program.think.trend if program.think else None,
             well_formed=True,
             semantic_passed=True,
             zone_type=zone_type,
@@ -397,6 +269,6 @@ class TLangReward:
         tránh phải sửa lại 2 lần."""
         rewards = []
         for prompt, completion, future_bin in zip(prompts, completions, future_bins):
-            reward = self.compute_reward(prompt, completion, future_bin, **kwargs)
+            reward = self.compute_reward(prompt, completion, future_bin)
             rewards.append(reward)
         return rewards

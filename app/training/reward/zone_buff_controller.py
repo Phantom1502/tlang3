@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+import os
 from pathlib import Path
 from typing import Dict, Sequence
 from app.config.schema import RoundConfig, GroupBuffState
@@ -93,3 +94,17 @@ class EMABuffController:
             return True
         except Exception:
             return False
+        
+    @classmethod
+    def load_or_init(round_config: RoundConfig, resume_checkpoint: str = None) -> EMABuffController:
+        groups = tuple(round_config.zone_buffs.keys())
+        buff_controller = EMABuffController(groups=groups, namespace="zone")
+
+        import os
+        buff_path = os.path.join(resume_checkpoint, "zone_buff_state.json") if resume_checkpoint else None
+        if buff_path and Path(buff_path).exists():
+            buff_controller.load(buff_path)
+        else:
+            buff_controller.init(round_config)   # round MỚI hoặc load thất bại -> seed lại từ config
+
+        return buff_controller
