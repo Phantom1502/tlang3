@@ -140,7 +140,7 @@ def build_train_ds():
     gen = ZoneGRPOGen(output_path)
     gen.generate(
         inputs,
-        n_augments=4,
+        n_augments=1,
         stride=10
     )
     
@@ -154,7 +154,7 @@ def build_val_ds():
     gen = ZoneGRPOGen(output_path)
     gen.generate(
         inputs,
-        n_augments=4,
+        n_augments=1,
         stride=10
     )
         
