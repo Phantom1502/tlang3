@@ -129,9 +129,20 @@ class TLangReward:
         self,
         cfg: AppConfig,
         round_config: RoundConfig,
-        buff_controller: EMABuffController,
-        stats_collector: StatsCollector,
+        buff_controller: Optional[EMABuffController] = None,
+        stats_collector: Optional[StatsCollector] = None,
     ):
+        """
+        Có 2 chế độ chạy cơ bản:
+        1. Training: buff_controller != None, stats_collector != None, reward = gate_score + zone_quality + buff
+        2. Evaluation: buff_controller = None, stats_collector = None, reward = gate_score + zone_quality
+
+        Args:
+            cfg (AppConfig): _description_
+            round_config (RoundConfig): _description_
+            buff_controller (Optional[EMABuffController], optional): _description_. Defaults to None.
+            stats_collector (Optional[StatsCollector], optional): _description_. Defaults to None.
+        """
         self.__name__ = "TLangReward"
         self.cfg = cfg
         self.round_config = round_config
@@ -226,33 +237,38 @@ class TLangReward:
         common_result: CommonGateResult = self.common_check(parse_result, program)
         reward += common_result.gate_score
         if not common_result.passed:
-            meta = TaskRolloutMeta(
-                trend=program.think.trend if program.think else None,
-                well_formed=parse_result.is_well_formed(),
-                semantic_passed=False,
-                zone_type=None,
-                zone_quality=None,
-                buff_applied=None
-            )
-            self.stats_collector.log(meta)
+            if self.stats_collector is not None:
+                meta = TaskRolloutMeta(
+                    trend=program.think.trend if program.think else None,
+                    well_formed=parse_result.is_well_formed(),
+                    semantic_passed=False,
+                    zone_type=None,
+                    zone_quality=None,
+                    buff_applied=None
+                )
+                self.stats_collector.log(meta)
             return reward
         
         
         zone_score: ZoneTaskScore = self.zone_score(program, future_bins)
-        # TODO: phần này hơi hard code, nếu ko khớp với config type thì sẽ bị lỗi, nếu có giải pháp khác thì nên thay đổi
         zone_type = self._get_zone_type(program)
-        buff = self.buff_controller.get_buff(zone_type)
-        reward = reward + zone_score.zone_quality + buff
+        
+        if self.buff_controller is not None:
+            buff = self.buff_controller.get_buff(zone_type)
+            reward = reward + zone_score.zone_quality + buff
+        else:
+            reward = reward + zone_score.zone_quality
 
-        meta = TaskRolloutMeta(
-            trend=program.think.trend if program.think else None,
-            well_formed=True,
-            semantic_passed=True,
-            zone_type=zone_type,
-            zone_quality=zone_score.zone_quality,
-            buff_applied=buff
-        )
-        self.stats_collector.log(meta)
+        if self.stats_collector is not None:
+            meta = TaskRolloutMeta(
+                trend=program.think.trend if program.think else None,
+                well_formed=True,
+                semantic_passed=True,
+                zone_type=zone_type,
+                zone_quality=zone_score.zone_quality,
+                buff_applied=buff if self.buff_controller is not None else None
+            )
+            self.stats_collector.log(meta)
         return reward
 
     def __call__(
