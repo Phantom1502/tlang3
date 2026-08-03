@@ -54,6 +54,8 @@ def main(cfg: AppConfig):
         limit=args.limit,
     )
     zone_eval.run()
+    
+    zone_eval.print_summary()
 
 if __name__ == "__main__":   
     from app.config.loader import load_config
