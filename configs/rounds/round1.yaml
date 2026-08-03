@@ -1,21 +1,21 @@
 round_id: round1
 alpha: 0.15
 kp: 0.005
-kd: 0.01
-step_max: 0.1
+kd: 0.005
+step_max: 0.005
 zone_buffs:
   NO_ZONE:
-    buff_min: 0.5
+    buff_min: 0.8
     buff_max: 1.0
     buff_init: 1.0
     target_ratio: 0.2
   SUP_ZONE:
-    buff_min: 0.0
-    buff_max: 0.10
-    buff_init: 0.0
+    buff_min: 0.00
+    buff_max: 0.05
+    buff_init: 0.00
     target_ratio: 0.4
   RES_ZONE:
-    buff_min: 0.0
-    buff_max: 0.4
-    buff_init: 0.0
+    buff_min: 0.00
+    buff_max: 0.05
+    buff_init: 0.00
     target_ratio: 0.4
