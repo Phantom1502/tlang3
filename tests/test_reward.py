@@ -91,7 +91,7 @@ def run() -> None:
     buff_controller = EMABuffController(groups=tuple(round_config.zone_buffs.keys()), namespace="zone")
     buff_controller.init(round_config)   # buff = buff_init = 0.0 cho cả 3 nhóm lúc mới seed
 
-    reward_fn = TLangReward(cfg, round_config, buff_controller, StatsCollector())
+    reward_fn = TLangReward(cfg, buff_controller, StatsCollector())
 
     # ------------------------------------------------------------
     # Case 1: well-form fail (garbage hoàn toàn) -> gate_score thấp, không có zone/buff
