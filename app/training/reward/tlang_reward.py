@@ -222,7 +222,7 @@ class TLangReward:
             )
 
         # Apply scale factor, r_multiple in range [0, rr_max] -> zone_quality in range [0, rr_max * zone_score_weight]
-        zone_quality = probe.r_multiple * self.round_config.zone_score_weight
+        zone_quality = probe.r_multiple * self.base.zone_score_weight
         return ZoneTaskScore(
             zone_quality=zone_quality,
             probe=probe,

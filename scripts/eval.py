@@ -1,18 +1,13 @@
 """
 Run examples:
 
-python -m scripts.eval --model_repo sullivan1502/base-zone-grpo --round_id round1 --dataset_repo sullivan1502/zone-grpo-data
+python -m scripts.eval --model_repo sullivan1502/base-zone-grpo --round_id round1 --dataset_repo sullivan1502/zone-grpo-data --batch_size 128
 """
 from __future__ import annotations
 
 import argparse
-import logging
-import os
 
-logger = logging.getLogger("scripts.eval")
-logging.basicConfig(level=logging.INFO, format="[%(name)s] %(message)s")
-
-from app.config.schema import AppConfig, RoundConfig
+from app.config.schema import AppConfig
 from app.training.zone_eval import ZoneEval
 
 def build_arg_parser() -> argparse.ArgumentParser:

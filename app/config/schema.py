@@ -24,6 +24,7 @@ class BaseConfig:
     n_bins: int
     zone_width_min_bins: int
     zone_width_max_bins: int
+    zone_score_weight: float
     digit_pad: int
     rr_min: int
     rr_max: int
@@ -125,7 +126,6 @@ class ZoneBuffConfig:
 @dataclass(frozen=True)
 class RoundConfig:
     round_id: str
-    zone_score_weight: float
     alpha: float
     kp: float
     kd: float

@@ -1,5 +1,4 @@
 round_id: round1
-zone_score_weight: 0.1
 alpha: 0.1
 kp: 0.01
 kd: 0.01

@@ -57,6 +57,7 @@ def _build_base_config(data: Dict[str, Any], source: str) -> BaseConfig:
         n_bins=_require_field(data, "n_bins", source),
         zone_width_min_bins=_require_field(data, "zone_width_min_bins", source),
         zone_width_max_bins=_require_field(data, "zone_width_max_bins", source),
+        zone_score_weight=_require_field(data, "zone_score_weight", source),
         digit_pad=_require_field(data, "digit_pad", source),
         rr_min=_require_field(data, "rr_min", source),
         rr_max=_require_field(data, "rr_max", source),
@@ -143,7 +144,6 @@ def _build_round_config(data: Dict[str, Any], source: str) -> RoundConfig:
         )
     return RoundConfig(
         round_id=_require_field(data, "round_id", source),
-        zone_score_weight=_require_field(data, "zone_score_weight", source),
         alpha=_require_field(data, "alpha", source),
         kp=_require_field(data, "kp", source),
         kd=_require_field(data, "kd", source),
