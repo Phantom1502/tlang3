@@ -175,9 +175,8 @@ def main(cfg: AppConfig):
     
     tlang_reward = TLangReward(
         cfg,
-        round_config, 
-        buff_controller, 
-        stats_collector
+        buff_controller=buff_controller,
+        stats_collector=stats_collector,
     )
     
     trainer = GRPOTrainer(

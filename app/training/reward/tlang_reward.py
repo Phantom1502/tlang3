@@ -128,7 +128,7 @@ class TLangReward:
     def __init__(
         self,
         cfg: AppConfig,
-        round_config: RoundConfig,
+        round_config: Optional[RoundConfig] = None, # Hiện tại không còn dùng round_config vì zone_score_weight đã chuyển vào cfg.base.zone_score_weight
         buff_controller: Optional[EMABuffController] = None,
         stats_collector: Optional[StatsCollector] = None,
     ):
@@ -145,7 +145,6 @@ class TLangReward:
         """
         self.__name__ = "TLangReward"
         self.cfg = cfg
-        self.round_config = round_config
         self.buff_controller = buff_controller
         self.stats_collector = stats_collector
         

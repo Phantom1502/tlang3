@@ -22,7 +22,6 @@ import torch
 from datasets import load_dataset
 from transformers import LlamaForCausalLM
 
-from app.config.loader import get_round_config
 from app.config.schema import AppConfig
 from app.tokenizer.hub import load_tokenizer
 from app.training.reward.stats_collector import StatsCollector
@@ -48,7 +47,6 @@ class ZoneEval:
     def __init__(
         self,
         cfg: AppConfig,
-        round_id: str,
         model_repo: str,
         dataset_repo: str,
         revision: Optional[str] = None,
@@ -63,7 +61,6 @@ class ZoneEval:
         limit: Optional[int] = None,
     ):
         self.cfg = cfg
-        self.round_config = get_round_config(cfg, round_id)
         self.batch_size = batch_size
         self.max_new_tokens = max_new_tokens
         self.do_sample = do_sample
@@ -102,7 +99,7 @@ class ZoneEval:
         # EMABuffController giả lập = 0 nữa (TLangReward đã tự xử lý case
         # này qua tham số buff_controller Optional). ---
         self.stats_collector = StatsCollector()
-        self.reward_fn = TLangReward(cfg, self.round_config, buff_controller=None, stats_collector=self.stats_collector)
+        self.reward_fn = TLangReward(cfg, buff_controller=None, stats_collector=self.stats_collector)
 
         # Lưu song song reward TRẢ VỀ THẬT của compute_reward() theo đúng thứ tự
         # log — KHÔNG suy ngược từ hằng số gate_score=2.0 (giả định nội bộ của
