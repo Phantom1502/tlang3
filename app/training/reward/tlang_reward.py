@@ -40,6 +40,7 @@ class OutcomeStatus(Enum):
     LOSS = "LOSS"
     TIMEOUT = "TIMEOUT"
     INVALID_SETUP = "INVALID_SETUP"
+    ZONE_NOT_TOUCHED = "ZONE_NOT_TOUCHED"
 
 
 @dataclass
@@ -102,7 +103,7 @@ def probe_zone_quality(
     touch_idx = _find_first_touch(zone, future_candles[:outcome_horizon])
     if touch_idx is None:
         # điều kiện #1 KHÔNG thoả — zone không bao giờ được chạm trong horizon
-        return ForwardTestResult(status=OutcomeStatus.INVALID_SETUP, r_multiple=0.0)
+        return ForwardTestResult(status=OutcomeStatus.ZONE_NOT_TOUCHED, r_multiple=0.1) # phân biệt với zone sl
 
     if zone.direction == "support":
         entry, sl, direction = zone.upper_bin, zone.lower_bin - ZONE_PROBE_SL_BUFFER_BINS, "long"
