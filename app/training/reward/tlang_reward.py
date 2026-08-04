@@ -55,7 +55,7 @@ class ZoneTaskScore:
     zone_quality: float          # r_multiple của probe, 0.0 nếu không có zone hoặc INVALID_SETUP
     probe: Optional[ForwardTestResult]
     has_zone: bool
-    is_touched: bool = False
+    is_touched: Optional[bool]
 
 def measure_max_favorable_r(
     entry_bin: int,
@@ -203,6 +203,7 @@ class TLangReward:
                 zone_quality=0.0,
                 probe=None,
                 has_zone=False,
+                is_touched=None
             )
             
         future_candles: List[Candle] = [Candle(*b) for b in future_bins]
