@@ -226,13 +226,10 @@ class ZoneInference:
         zone_type = _get_zone_type(zone)
         zone_quality = 0.0
         if zone is not None:
-            last_10_candles_nodes = program.chart.candles[-self.cfg.base.zone_last_n_touch:]
-            last_10_candles = [Candle(cn.o, cn.h, cn.l, cn.c) for cn in last_10_candles_nodes]
             future_candles = [Candle(*b) for b in future_bins]
-            verify_candles = last_10_candles + future_candles
             probe = probe_zone_quality(
                 zone, 
-                verify_candles,
+                future_candles,
                 outcome_horizon=self.cfg.window.outcome_horizon,
                 cap=self.cfg.base.rr_max,
             )
