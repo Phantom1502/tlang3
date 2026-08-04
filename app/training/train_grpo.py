@@ -146,13 +146,7 @@ def main(cfg: AppConfig):
         max_steps=train_cfg.max_steps,
         logging_steps=train_cfg.logging_steps,
         max_completion_length=args.max_completion_length,
-        
-        epsilon=0.1,
-        max_grad_norm=0.3,
-        use_adaptive_entropy = True,
-        entropy_coef=0.01,
-        entropy_target=0.5,
-        
+
         temperature=args.temperature,
         top_p=args.top_p,
         top_k=args.top_k if args.top_k > 0 else None,
@@ -170,6 +164,56 @@ def main(cfg: AppConfig):
         save_steps=train_cfg.save_steps,
         save_total_limit=2,
         report_to=[],
+
+        # =====================================================================
+        # THÊM MỚI — phanh trực tiếp nhất, rẻ nhất. Log cũ cho thấy grad_norm
+        # 2.5-3.9 mà không có max_grad_norm tường minh nào chặn lại (mặc định
+        # HF Trainer là 1.0, NHƯNG cần set rõ ràng ở đây để chắc chắn, không
+        # phụ thuộc default có thể đổi giữa các version). Nếu sau khi set vẫn
+        # thấy log in ra > giá trị này, đó là log đang in grad_norm TRƯỚC khi
+        # clip — hành vi bình thường, không phải bug.
+        # =====================================================================
+        max_grad_norm=1.0,
+
+        # =====================================================================
+        # THÊM MỚI — KL penalty với ref model = bản đóng băng của chính
+        # checkpoint init (SFT/round trước). Đây LÀ trust-region, KHÔNG liên
+        # quan gì tới việc data là gen hay real — chỉ neo policy không trôi
+        # quá xa 1 điểm đã biết well-formed/semantic pass. beta nhỏ (0.02-0.05)
+        # để không cản học nhưng vẫn có phanh. Bắt đầu 0.02, tăng lên nếu vẫn
+        # thấy grad_norm/entropy collapse sau khi áp dụng.
+        # =====================================================================
+        beta=0.02,
+
+        # =====================================================================
+        # THÊM MỚI — chuẩn hoá reward theo std TOÀN BATCH thay vì std của từng
+        # nhóm 16 completion/prompt. Với reward hiện tại (2 điểm well-formed/
+        # semantic gần như bão hoà + zone_score dao động nhẹ), std TRONG NHÓM
+        # rất dễ nhỏ -> advantage bị khuếch đại quá mức cho vài sample lệch
+        # nhẹ. "batch" ổn định hơn nhiều vì mẫu số lớn hơn hẳn (batch_size *
+        # num_generations thay vì chỉ num_generations).
+        # =====================================================================
+        scale_rewards="batch",
+
+        # =====================================================================
+        # THÊM MỚI — kiểm tra lại cách chuẩn hoá loss theo độ dài completion.
+        # "dr_grpo" (Dr.GRPO) chuẩn hoá theo max_completion_length CỐ ĐỊNH thay
+        # vì per-sequence-length động (loss_type mặc định "grpo" có thể khuếch
+        # đại gradient khi completion ngắn/dao động độ dài như hiện tại,
+        # mean_length ~20 nhưng vẫn dao động 10-23). Thử "dr_grpo" trước, nếu
+        # không cải thiện thì quay lại "grpo" mặc định.
+        # =====================================================================
+        loss_type="dr_grpo",
+
+        # =====================================================================
+        # THÊM MỚI — set sàn tối thiểu cho std khi chia advantage, phòng
+        # trường hợp std khác 0 nhưng RẤT nhỏ (không bị lọc bởi
+        # frac_reward_zero_std vì != 0, nhưng vẫn đủ nhỏ để khuếch đại
+        # advantage quá mức). Nếu bản trl đang dùng không có tham số này, bỏ
+        # dòng này đi — không phải version nào cũng hỗ trợ, kiểm tra
+        # GRPOConfig signature trước khi bật.
+        # =====================================================================
+        # epsilon (nếu trl hỗ trợ) — để mặc định nếu không chắc, không tự chế thêm field.
     )
     
     stats_persist_callback = StatsPersistCallback(

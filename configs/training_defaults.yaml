@@ -17,8 +17,8 @@ sft:
 grpo:
   batch_size: 16
   gradient_accumulation_steps: 16
-  learning_rate: 1e-7
-  warmup_steps: 4000
+  learning_rate: 1e-6
+  warmup_steps: 300
   max_steps: 150000
   logging_steps: 10
   save_steps: 100

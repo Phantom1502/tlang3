@@ -20,9 +20,10 @@ python -m app.training.train_grpo \
     --dataset_name "sullivan1502/zone-grpo-data" \
     \
     --max_completion_length 24 \
-    --temperature 1.1 \
+    --temperature 1.25 \
     --top_p 1.0 \
     --top_k 0 \
+    --min_p 0.02 \
     --num_generations 16 \
     \
     --output_dir "./output/base_grpo" \
