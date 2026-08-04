@@ -17,6 +17,7 @@ reward-shaping của train).
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Sequence
+from collections import defaultdict
 
 import torch
 from datasets import load_dataset
@@ -30,6 +31,51 @@ from app.training.reward.tlang_reward import TLangReward
 ZONE_TYPES = ("NO_ZONE", "SUP_ZONE", "RES_ZONE")
 REWARD_RELEVANT_ZONE_TYPES = ("SUP_ZONE", "RES_ZONE")   # NO_ZONE trung tính, bỏ qua ở mean_reward
 
+def print_zone_quality_histogram(
+    stats_collector,
+    zone_score_weight: float,
+    rr_max: int,
+    zone_types: Sequence[str] = ("SUP_ZONE", "RES_ZONE"),
+) -> None:
+    """
+    Bucket zone_quality (đã nhân weight, đúng thang với mean_reward) VỀ LẠI
+    số R nguyên gần nhất (0R, 1R, 2R, ..., rr_maxR) bằng cách chia ngược
+    cho zone_score_weight rồi round — group theo R để đọc trực quan, KHÔNG
+    group theo điểm zone_quality trần trụi (0.1, 0.2... khó hình dung hơn
+    "1R, 2R...").
+    """
+    if zone_score_weight <= 0:
+        print("zone_score_weight <= 0 — không thể quy đổi ngược về R, bỏ qua histogram.")
+        return
+
+    per_type_counts = {zt: defaultdict(int) for zt in zone_types}
+    per_type_total = {zt: 0 for zt in zone_types}
+
+    for r in stats_collector._records:
+        if r.zone_type not in zone_types or r.zone_quality is None:
+            continue
+        r_multiple_approx = round(r.zone_quality / zone_score_weight)
+        r_multiple_approx = max(0, min(rr_max, r_multiple_approx))   # kẹp về [0, rr_max] phòng sai số round
+        per_type_counts[r.zone_type][r_multiple_approx] += 1
+        per_type_total[r.zone_type] += 1
+
+    print("\n=== Phân phối zone_quality theo bội số R (SUP/RES) ===")
+    for zt in zone_types:
+        total = per_type_total[zt]
+        print(f"\n{zt} (n={total}):")
+        if total == 0:
+            print("  (không có sample nào)")
+            continue
+        for r_level in range(0, rr_max + 1):
+            n = per_type_counts[zt].get(r_level, 0)
+            ratio = n / total
+            bar = "#" * int(ratio * 40)
+            print(f"  {r_level:>2}R  count={n:<6} ratio={ratio * 100:5.1f}%  {bar}")
+
+        n_at_cap = per_type_counts[zt].get(rr_max, 0)
+        print(f"  -> tỉ lệ chạm cap ({rr_max}R): {n_at_cap / total * 100:.1f}%")
+        n_zero = per_type_counts[zt].get(0, 0)
+        print(f"  -> tỉ lệ zone_quality=0 (chạm SL gần như ngay): {n_zero / total * 100:.1f}%")
 
 class ZoneEval:
     """
@@ -195,3 +241,5 @@ class ZoneEval:
             mr = result["mean_reward"][zt]
             mr_str = f"{mr:.4f}" if mr is not None else "-"
             print(f"  {zt:<10} mean_reward={mr_str}")
+            
+        print_zone_quality_histogram(self.stats_collector, self.zone_score_weight, self.cfg.base.rr_max)
