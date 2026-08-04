@@ -203,7 +203,7 @@ class TLangReward:
                 has_zone=False,
             )
 
-        last_10_candles_nodes = program.think.chart.candles[-10:]
+        last_10_candles_nodes = program.chart.candles[-10:]
         last_10_candles = [Candle(cn.o, cn.h, cn.l, cn.c) for cn in last_10_candles_nodes]
         future_candles: List[Candle] = [Candle(*b) for b in future_bins]
         verify_candles = last_10_candles + future_candles
