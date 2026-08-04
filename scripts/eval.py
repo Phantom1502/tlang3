@@ -1,7 +1,7 @@
 """
 Run examples:
 
-python -m scripts.eval --model_repo sullivan1502/base-zone-grpo --round_id round1 --dataset_repo sullivan1502/zone-grpo-data --batch_size 128
+python -m scripts.eval --model_repo sullivan1502/base-zone-grpo --dataset_repo sullivan1502/zone-grpo-data --batch_size 128
 """
 from __future__ import annotations
 
@@ -14,7 +14,6 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 
     p.add_argument("--model_repo", required=True, help="checkpoint task1 (HF Hub repo_id)")
-    p.add_argument("--round_id", required=True, help="round id, vd: round1")
     
     p.add_argument("--dataset_repo", required=True, help="Dataset GRPO gốc (schema prompt/future_bins/symbol/window_id)")
     p.add_argument("--subfolder", default=None, help="Subfolder trong dataset repo. Ex: 'last-checkpoint' (hub_strategy='checkpoint' của train_grpo.py push vào đây, KHÁC bản 'final' ở root repo). Default: None (root repo).")
@@ -39,7 +38,6 @@ def main(cfg: AppConfig):
     
     zone_eval = ZoneEval(
         cfg=cfg,
-        round_id=args.round_id,
         model_repo=args.model_repo,
         dataset_repo=args.dataset_repo,
         revision=args.revision,
