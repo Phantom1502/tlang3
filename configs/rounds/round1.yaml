@@ -1,8 +1,8 @@
 round_id: round1
 alpha: 0.15
-kp: 0.005
-kd: 0.005
-step_max: 0.005
+kp: 0.001
+kd: 0.001
+step_max: 0.001
 zone_buffs:
   NO_ZONE:
     buff_min: 0.0
