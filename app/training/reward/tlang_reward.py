@@ -204,7 +204,7 @@ class TLangReward:
             )
 
         last_10_candles_nodes = program.think.chart.candles[-10:]
-        last_10_candles = [Candle(*cn) for cn in last_10_candles_nodes]
+        last_10_candles = [Candle(cn.o, cn.h, cn.l, cn.c) for cn in last_10_candles_nodes]
         future_candles: List[Candle] = [Candle(*b) for b in future_bins]
         verify_candles = last_10_candles + future_candles
         probe: ForwardTestResult = probe_zone_quality(
