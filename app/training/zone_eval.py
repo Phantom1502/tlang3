@@ -242,4 +242,4 @@ class ZoneEval:
             mr_str = f"{mr:.4f}" if mr is not None else "-"
             print(f"  {zt:<10} mean_reward={mr_str}")
             
-        print_zone_quality_histogram(self.stats_collector, self.zone_score_weight, self.cfg.base.rr_max)
+        print_zone_quality_histogram(self.stats_collector, self.cfg.base.zone_score_weight, self.cfg.base.rr_max)
