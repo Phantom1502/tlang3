@@ -146,7 +146,13 @@ def main(cfg: AppConfig):
         max_steps=train_cfg.max_steps,
         logging_steps=train_cfg.logging_steps,
         max_completion_length=args.max_completion_length,
-
+        
+        epsilon=0.1,
+        max_grad_norm=0.3,
+        use_adaptive_entropy = True,
+        entropy_coef=0.01,
+        entropy_target=0.5,
+        
         temperature=args.temperature,
         top_p=args.top_p,
         top_k=args.top_k if args.top_k > 0 else None,
