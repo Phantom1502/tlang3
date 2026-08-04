@@ -22,10 +22,11 @@ class TaskRolloutMeta:
     trend: Optional[str]
     well_formed: bool
     semantic_passed: bool
-    zone_type: Optional[str]         # "NO_ZONE" / "SUP_ZONE" / "RES_ZONE" — None nếu chưa pass gate
-    zone_quality: Optional[float]    # = zone_task.zone_quality (đã nhân zone_score_weight), None nếu chưa pass gate
-    buff_applied: Optional[float]    # = buff cộng theo zone_type, None nếu chưa pass gate
-    is_touched: Optional[bool] = None # = zone_task.is_touched
+    zone_type: Optional[str]          # "NO_ZONE" / "SUP_ZONE" / "RES_ZONE" — None nếu chưa pass gate
+    zone_quality: Optional[float]     # = zone_task.zone_quality (đã nhân zone_score_weight), None nếu chưa pass gate
+    buff_applied: Optional[float]     # = buff cộng theo zone_type, None nếu chưa pass gate hoặc eval mode (buff_controller=None)
+    is_touched: Optional[bool] = None  # True/False nếu zone_type in (SUP_ZONE,RES_ZONE); None nếu NO_ZONE hoặc chưa pass gate
+
 
 class StatsCollector:
     """
@@ -83,10 +84,14 @@ class StatsCollector:
         Breakdown theo trend -> zone_type, CHỈ tính trên record đã pass gate
         (well_formed + semantic_passed). Không có r_multiple/rr/win_rate như
         v1/v2 (task1 không có outcome thật, chỉ có zone_quality liên tục).
+
+        touch_rate: tỉ lệ is_touched=True trong số record CÓ zone (SUP/RES)
+        của đúng (trend, zone_type) đó — None cho NO_ZONE (is_touched luôn
+        None ở nhóm này, không có gì để tính tỉ lệ).
         """
         by_trend_total: Dict[str, int] = defaultdict(int)
         raw: Dict[str, Dict[str, dict]] = defaultdict(
-            lambda: defaultdict(lambda: {"count": 0, "zone_qualities": [], "buffs": []})
+            lambda: defaultdict(lambda: {"count": 0, "zone_qualities": [], "buffs": [], "touched": []})
         )
         for r in self._records:
             if r.trend is None or not (r.well_formed and r.semantic_passed) or r.zone_type is None:
@@ -98,6 +103,8 @@ class StatsCollector:
                 entry["zone_qualities"].append(r.zone_quality)
             if r.buff_applied is not None:
                 entry["buffs"].append(r.buff_applied)
+            if r.is_touched is not None:
+                entry["touched"].append(r.is_touched)
 
         result: Dict[str, Dict[str, dict]] = {}
         for trend, zone_types in raw.items():
@@ -106,13 +113,29 @@ class StatsCollector:
             for zone_type, entry in zone_types.items():
                 zqs = entry["zone_qualities"]
                 buffs = entry["buffs"]
+                touched = entry["touched"]
                 result[trend][zone_type] = {
                     "count": entry["count"],
                     "freq_within_trend": entry["count"] / total if total else 0.0,
                     "avg_zone_quality": (sum(zqs) / len(zqs)) if zqs else None,
                     "avg_buff": (sum(buffs) / len(buffs)) if buffs else None,
+                    "touch_rate": (sum(touched) / len(touched)) if touched else None,
                 }
         return result
+
+    def touch_rate_by_zone_type(self) -> Dict[str, Optional[float]]:
+        """Tỉ lệ is_touched=True TOÀN BỘ lịch sử (không stratify theo
+        trend), CHỈ cho zone_type có is_touched không None (SUP_ZONE,
+        RES_ZONE) — NO_ZONE trả None (không áp dụng khái niệm touch)."""
+        counts: Dict[str, List[bool]] = defaultdict(list)
+        for r in self._records:
+            if not (r.well_formed and r.semantic_passed) or r.zone_type is None or r.is_touched is None:
+                continue
+            counts[r.zone_type].append(r.is_touched)
+        return {
+            zt: (sum(vals) / len(vals) if vals else None)
+            for zt, vals in counts.items()
+        }
 
     def print_summary(self) -> None:
         n = len(self._records)
@@ -135,9 +158,10 @@ class StatsCollector:
             for zone_type, stat in zone_types.items():
                 avg_zq = f"{stat['avg_zone_quality']:.3f}" if stat["avg_zone_quality"] is not None else "-"
                 avg_buff = f"{stat['avg_buff']:.3f}" if stat["avg_buff"] is not None else "-"
+                touch_rate = f"{stat['touch_rate']*100:.1f}%" if stat["touch_rate"] is not None else "-"
                 print(
                     f"  {zone_type:<10} count={stat['count']:<6} freq={stat['freq_within_trend']*100:5.1f}%  "
-                    f"avg_zone_quality={avg_zq:>7}  avg_buff={avg_buff:>7}"
+                    f"avg_zone_quality={avg_zq:>7}  avg_buff={avg_buff:>7}  touch_rate={touch_rate:>6}"
                 )
 
         print("\n-- Zone_type counts (toàn bộ lịch sử từ lần reset gần nhất, đã pass gate) --")
@@ -146,6 +170,15 @@ class StatsCollector:
             n_zt = zone_counts[zone_type]
             ratio = n_zt / zone_total if zone_total else 0.0
             print(f"  {zone_type:<10} count={n_zt:<6} ratio={ratio * 100:5.1f}%")
+
+        print("\n-- Tỉ lệ zone đã CHẠM (is_touched, toàn bộ lịch sử, KHÔNG stratify theo trend) --")
+        touch_rates = self.touch_rate_by_zone_type()
+        if not touch_rates:
+            print("  (chưa có record nào có zone SUP/RES)")
+        for zone_type in sorted(touch_rates.keys()):
+            rate = touch_rates[zone_type]
+            rate_str = f"{rate * 100:.1f}%" if rate is not None else "-"
+            print(f"  {zone_type:<10} touch_rate={rate_str}")
 
     def to_list(self) -> List[dict]:
         return [asdict(r) for r in self._records]
@@ -162,6 +195,7 @@ class StatsCollector:
         if p.exists():
             data = json.loads(p.read_text(encoding="utf-8"))
             for d in data.get("records", []):
+                d.setdefault("is_touched", None)   # tương thích ngược file stats cũ chưa có field này
                 collector.log(TaskRolloutMeta(**d))
         return collector
 
@@ -174,5 +208,6 @@ class StatsCollector:
                 continue
             data = json.loads(p.read_text(encoding="utf-8"))
             for d in data.get("records", []):
+                d.setdefault("is_touched", None)   # tương thích ngược file stats cũ chưa có field này
                 collector.log(TaskRolloutMeta(**d))
         return collector
