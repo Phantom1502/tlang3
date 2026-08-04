@@ -55,6 +55,7 @@ class ZoneTaskScore:
     zone_quality: float          # r_multiple của probe, 0.0 nếu không có zone hoặc INVALID_SETUP
     probe: Optional[ForwardTestResult]
     has_zone: bool
+    is_touched: bool = False
 
 def measure_max_favorable_r(
     entry_bin: int,
@@ -103,7 +104,7 @@ def probe_zone_quality(
     touch_idx = _find_first_touch(zone, future_candles[:outcome_horizon])
     if touch_idx is None:
         # điều kiện #1 KHÔNG thoả — zone không bao giờ được chạm trong horizon
-        return ForwardTestResult(status=OutcomeStatus.ZONE_NOT_TOUCHED, r_multiple=0.1) # phân biệt với zone sl
+        return ForwardTestResult(status=OutcomeStatus.ZONE_NOT_TOUCHED, r_multiple=0.0)
 
     if zone.direction == "support":
         entry, sl, direction = zone.upper_bin, zone.lower_bin - ZONE_PROBE_SL_BUFFER_BINS, "long"
@@ -212,10 +213,12 @@ class TLangReward:
             cap=self.cfg.base.rr_max
         )
         if probe.status == OutcomeStatus.INVALID_SETUP:
+            # Case này ko hề xảy ra
             return ZoneTaskScore(
                 zone_quality=0.0,
                 probe=probe,
                 has_zone=True,
+                is_touched=False
             )
 
         # Apply scale factor, r_multiple in range [0, rr_max] -> zone_quality in range [0, rr_max * zone_score_weight]
@@ -224,6 +227,7 @@ class TLangReward:
             zone_quality=zone_quality,
             probe=probe,
             has_zone=True,
+            is_touched=(probe.status != OutcomeStatus.ZONE_NOT_TOUCHED)
         )
 
     def compute_reward(self, prompt: Any, completion: str, future_bins: Sequence[Sequence[int]]) -> float:
@@ -241,7 +245,8 @@ class TLangReward:
                     semantic_passed=False,
                     zone_type=None,
                     zone_quality=None,
-                    buff_applied=None
+                    buff_applied=None,
+                    is_touched=None
                 )
                 self.stats_collector.log(meta)
             return reward
@@ -263,7 +268,8 @@ class TLangReward:
                 semantic_passed=True,
                 zone_type=zone_type,
                 zone_quality=zone_score.zone_quality,
-                buff_applied=buff if self.buff_controller is not None else None
+                buff_applied=buff if self.buff_controller is not None else None,
+                is_touched=zone_score.is_touched
             )
             self.stats_collector.log(meta)
         return reward

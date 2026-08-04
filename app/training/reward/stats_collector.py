@@ -25,7 +25,7 @@ class TaskRolloutMeta:
     zone_type: Optional[str]         # "NO_ZONE" / "SUP_ZONE" / "RES_ZONE" — None nếu chưa pass gate
     zone_quality: Optional[float]    # = zone_task.zone_quality (đã nhân zone_score_weight), None nếu chưa pass gate
     buff_applied: Optional[float]    # = buff cộng theo zone_type, None nếu chưa pass gate
-
+    is_touched: Optional[bool] = None # = zone_task.is_touched
 
 class StatsCollector:
     """
