@@ -226,7 +226,7 @@ class ZoneInference:
         zone_type = _get_zone_type(zone)
         zone_quality = 0.0
         if zone is not None:
-            last_10_candles_nodes = program.chart.candles[-10:]
+            last_10_candles_nodes = program.chart.candles[-self.cfg.base.zone_last_n_touch:]
             last_10_candles = [Candle(cn.o, cn.h, cn.l, cn.c) for cn in last_10_candles_nodes]
             future_candles = [Candle(*b) for b in future_bins]
             verify_candles = last_10_candles + future_candles
@@ -248,7 +248,7 @@ class ZoneInference:
         chart: List[Candle] = [
             Candle(open=cn.o, high=cn.h, low=cn.l, close=cn.c) for cn in program.chart.candles
         ]
-        return _is_price_in_zone_now(chart, program.think.zone)
+        return _is_price_in_zone_now(chart, program.think.zone, last_n=self.cfg.base.zone_last_n_touch)
 
     # ------------------------------------------------------------------
     # Ghi parquet — 1 shard/lần flush, KHÔNG append vào file cũ.

@@ -58,6 +58,7 @@ def _build_base_config(data: Dict[str, Any], source: str) -> BaseConfig:
         zone_width_min_bins=_require_field(data, "zone_width_min_bins", source),
         zone_width_max_bins=_require_field(data, "zone_width_max_bins", source),
         zone_score_weight=_require_field(data, "zone_score_weight", source),
+        zone_last_n_touch=_require_field(data, "zone_last_n_touch", source),
         digit_pad=_require_field(data, "digit_pad", source),
         rr_min=_require_field(data, "rr_min", source),
         rr_max=_require_field(data, "rr_max", source),
