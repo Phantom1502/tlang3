@@ -55,7 +55,6 @@ class ZoneTaskScore:
     probe: Optional[ForwardTestResult]
     has_zone: bool
 
-
 def measure_max_favorable_r(
     entry_bin: int,
     sl_bin: int,
@@ -88,6 +87,11 @@ def measure_max_favorable_r(
             break
     return max_r
 
+def _find_first_touch(zone: ZoneNode, candles: List[Candle]) -> Optional[int]:
+    for i, c in enumerate(candles):
+        if c.low <= zone.upper_bin and c.high >= zone.lower_bin:
+            return i
+    return None
 
 def probe_zone_quality(
     zone: ZoneNode,
@@ -95,29 +99,22 @@ def probe_zone_quality(
     outcome_horizon: int,
     cap: float,
 ) -> ForwardTestResult:
-    """
-    Mô phỏng "vào lệnh ngay khi giá chạm mép zone (entry), cắt lỗ ngay khi
-    giá phá thủng mép đối diện + buffer" — support: entry=upper_bin,
-    sl=lower_bin-buffer, long. resistance: entry=lower_bin, sl=upper_bin+
-    buffer, short. Trả r_multiple = max-favorable-R đã đạt trước khi bị SL
-    (KHÔNG phải outcome thật, chỉ là thước đo "zone này có đáng chú ý").
-    """
+    touch_idx = _find_first_touch(zone, future_candles[:outcome_horizon])
+    if touch_idx is None:
+        # điều kiện #1 KHÔNG thoả — zone không bao giờ được chạm trong horizon
+        return ForwardTestResult(status=OutcomeStatus.INVALID_SETUP, r_multiple=0.0)
+
     if zone.direction == "support":
         entry, sl, direction = zone.upper_bin, zone.lower_bin - ZONE_PROBE_SL_BUFFER_BINS, "long"
     else:
         entry, sl, direction = zone.lower_bin, zone.upper_bin + ZONE_PROBE_SL_BUFFER_BINS, "short"
 
+    remaining_horizon = outcome_horizon - touch_idx
     target = measure_max_favorable_r(
-        entry, 
-        sl, 
-        future_candles, 
-        direction,
-        outcome_horizon=outcome_horizon,
-        cap=cap
+        entry, sl, future_candles[touch_idx:], direction,
+        outcome_horizon=remaining_horizon, cap=cap,
     )
-
     return ForwardTestResult(status=OutcomeStatus.WIN, r_multiple=target)
-
 
 class TLangReward:
     """
@@ -206,10 +203,13 @@ class TLangReward:
                 has_zone=False,
             )
 
+        last_10_candles_nodes = program.think.chart.candles[-10:]
+        last_10_candles = [Candle(*cn) for cn in last_10_candles_nodes]
         future_candles: List[Candle] = [Candle(*b) for b in future_bins]
+        verify_candles = last_10_candles + future_candles
         probe: ForwardTestResult = probe_zone_quality(
             think.zone, 
-            future_candles,
+            verify_candles,
             outcome_horizon=self.cfg.window.outcome_horizon,
             cap=self.cfg.base.rr_max
         )
