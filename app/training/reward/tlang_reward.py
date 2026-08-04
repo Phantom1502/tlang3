@@ -31,11 +31,23 @@ class CommonGateResult:
 
 
 class OutcomeStatus(Enum):
-    """Trạng thái forward-test — task1 hiện chỉ dùng WIN (probe luôn "thắng"
-    theo nghĩa đo max-favorable-R, không có SL thật để LOSE) và
-    INVALID_SETUP (risk=0, zone suy biến). LOSS/TIMEOUT giữ lại cho tương lai
-    nếu sau này task1 cần forward-test kiểu nhị phân WIN/LOSS/TIMEOUT thật
-    (hiện chưa cần, vì task1 không có action/SL/RR để "đóng lệnh")."""
+    """
+    WIN: đã CHẠM zone (điều kiện #1 thoả), r_multiple = max-favorable-R đo
+        được TỪ ĐÚNG thời điểm chạm (KHÔNG PHẢI từ nến đầu tiên của window).
+    ZONE_NOT_TOUCHED: zone hợp lệ về hình học/hướng nhưng giá KHÔNG BAO GIỜ
+        chạm trong suốt outcome_horizon — r_multiple = 0.0 (KHÔNG dùng số
+        khác 0 để đánh dấu case này, vì r_multiple là thang đo dùng để TÍNH
+        REWARD, không phải chỗ nhét cờ trạng thái — trạng thái đã có field
+        `status`/`is_touched` riêng để phân biệt).
+    INVALID_SETUP: risk=0 (entry==sl, zone suy biến) — GIỮ LẠI trong enum
+        cho tương lai/phòng thủ, nhưng với công thức entry/sl hiện tại
+        (entry=mép zone, sl=mép đối diện-buffer) risk KHÔNG THỂ = 0 với
+        zone_width>=zone_width_min_bins>0 — probe_zone_quality() hiện KHÔNG
+        BAO GIỜ trả status này, xem zone_score() không còn check nhánh này.
+    LOSS/TIMEOUT: chưa dùng — giữ lại cho tương lai nếu task1 cần
+        forward-test nhị phân WIN/LOSS/TIMEOUT thật (task1 không có
+        action/SL/RR để "đóng lệnh" nên hiện chưa cần).
+    """
     WIN = "WIN"
     LOSS = "LOSS"
     TIMEOUT = "TIMEOUT"
@@ -52,10 +64,11 @@ class ForwardTestResult:
 
 @dataclass
 class ZoneTaskScore:
-    zone_quality: float          # r_multiple của probe, 0.0 nếu không có zone hoặc INVALID_SETUP
+    zone_quality: float            # r_multiple đã nhân zone_score_weight, 0.0 nếu không có zone HOẶC không chạm
     probe: Optional[ForwardTestResult]
     has_zone: bool
-    is_touched: Optional[bool]
+    is_touched: Optional[bool]     # None nếu không có zone (NO_ZONE) — KHÔNG dùng False cho case này
+
 
 def measure_max_favorable_r(
     entry_bin: int,
@@ -89,11 +102,16 @@ def measure_max_favorable_r(
             break
     return max_r
 
+
 def _find_first_touch(zone: ZoneNode, candles: List[Candle]) -> Optional[int]:
+    """Index nến ĐẦU TIÊN có [low,high] giao với [zone.lower_bin,
+    zone.upper_bin] — None nếu không nến nào chạm trong toàn bộ `candles`
+    (caller đã cắt đúng outcome_horizon trước khi truyền vào)."""
     for i, c in enumerate(candles):
         if c.low <= zone.upper_bin and c.high >= zone.lower_bin:
             return i
     return None
+
 
 def probe_zone_quality(
     zone: ZoneNode,
@@ -101,9 +119,20 @@ def probe_zone_quality(
     outcome_horizon: int,
     cap: float,
 ) -> ForwardTestResult:
+    """
+    Mô phỏng "vào lệnh NGAY KHI giá chạm mép zone (entry), cắt lỗ ngay khi
+    giá phá thủng mép đối diện + buffer" — support: entry=upper_bin,
+    sl=lower_bin-buffer, long. resistance: entry=lower_bin, sl=upper_bin+
+    buffer, short.
+
+    BẮT BUỘC điều kiện #1 (zone phải được giá tương lai CHẠM TỚI) trước khi
+    tính điều kiện #2 (không bị SL) — nếu không chạm, trả ZONE_NOT_TOUCHED
+    NGAY, KHÔNG giả định "vào lệnh từ nến đầu tiên của window" như bản cũ
+    (bản cũ để lọt qua case zone đặt xa giá hiện tại vẫn được điểm max nếu
+    trend tự nhiên đủ mạnh — không phản ánh đúng "model chọn zone khéo").
+    """
     touch_idx = _find_first_touch(zone, future_candles[:outcome_horizon])
     if touch_idx is None:
-        # điều kiện #1 KHÔNG thoả — zone không bao giờ được chạm trong horizon
         return ForwardTestResult(status=OutcomeStatus.ZONE_NOT_TOUCHED, r_multiple=0.0)
 
     if zone.direction == "support":
@@ -118,35 +147,37 @@ def probe_zone_quality(
     )
     return ForwardTestResult(status=OutcomeStatus.WIN, r_multiple=target)
 
+
 class TLangReward:
     """
     Reward function cho GRPO round của task1 — dùng làm `reward_funcs` cho
     GRPOTrainer (trl), qua __call__(prompts, completions, future_bins, ...).
+
+    2 chế độ chạy:
+        1. Training: buff_controller != None, stats_collector != None ->
+           reward = gate_score + zone_quality + buff.
+        2. Evaluation: buff_controller = None -> reward = gate_score +
+           zone_quality (bỏ hẳn buff). stats_collector vẫn nên truyền vào
+           (dù None cũng chạy được, chỉ là không log gì) để đọc lại
+           TaskRolloutMeta (bao gồm is_touched) sau khi eval.
     """
 
     def __init__(
         self,
         cfg: AppConfig,
-        round_config: Optional[RoundConfig] = None, # Hiện tại không còn dùng round_config vì zone_score_weight đã chuyển vào cfg.base.zone_score_weight
+        round_config: Optional[RoundConfig] = None,   # KHÔNG còn dùng trong class này — zone_score_weight
+                                                         # đã chuyển vào cfg.base.zone_score_weight. Giữ tham
+                                                         # số này lại (không xoá) để không phá vỡ chữ ký hàm
+                                                         # ở các call site đã có (train_grpo.py, ZoneEval) —
+                                                         # xoá thật sự CẦN sửa đồng thời mọi nơi gọi.
         buff_controller: Optional[EMABuffController] = None,
         stats_collector: Optional[StatsCollector] = None,
     ):
-        """
-        Có 2 chế độ chạy cơ bản:
-        1. Training: buff_controller != None, stats_collector != None, reward = gate_score + zone_quality + buff
-        2. Evaluation: buff_controller = None, stats_collector = None, reward = gate_score + zone_quality
-
-        Args:
-            cfg (AppConfig): _description_
-            round_config (RoundConfig): _description_
-            buff_controller (Optional[EMABuffController], optional): _description_. Defaults to None.
-            stats_collector (Optional[StatsCollector], optional): _description_. Defaults to None.
-        """
         self.__name__ = "TLangReward"
         self.cfg = cfg
         self.buff_controller = buff_controller
         self.stats_collector = stats_collector
-        
+
     def _get_zone_type(self, program: ProgramNode) -> str:
         if program.think.zone is None:
             return "NO_ZONE"
@@ -199,41 +230,29 @@ class TLangReward:
         đảm bảo điều này, hàm này không tự check lại passed)."""
         think = program.think
         if think.zone is None:
-            return ZoneTaskScore(
-                zone_quality=0.0,
-                probe=None,
-                has_zone=False,
-                is_touched=None
-            )
-            
+            return ZoneTaskScore(zone_quality=0.0, probe=None, has_zone=False, is_touched=None)
+
         future_candles: List[Candle] = [Candle(*b) for b in future_bins]
         probe: ForwardTestResult = probe_zone_quality(
-            think.zone, 
+            think.zone,
             future_candles,
             outcome_horizon=self.cfg.window.outcome_horizon,
-            cap=self.cfg.base.rr_max
+            cap=self.cfg.base.rr_max,
         )
-        if probe.status == OutcomeStatus.INVALID_SETUP:
-            # Case này ko hề xảy ra
-            return ZoneTaskScore(
-                zone_quality=0.0,
-                probe=probe,
-                has_zone=True,
-                is_touched=False
-            )
 
-        # Apply scale factor, r_multiple in range [0, rr_max] -> zone_quality in range [0, rr_max * zone_score_weight]
+        if probe.status == OutcomeStatus.ZONE_NOT_TOUCHED:
+            # KHÔNG cộng/trừ gì — chỉ ghi nhận trạng thái để quan sát qua
+            # StatsCollector (xem touch_rate_by_zone_type()). Nếu quan sát
+            # thấy tỉ lệ not-touched tăng bất thường qua các round, quay
+            # lại bàn thêm penalty RIÊNG BIỆT, KHÔNG lẫn vào zone_quality.
+            return ZoneTaskScore(zone_quality=0.0, probe=probe, has_zone=True, is_touched=False)
+
         zone_quality = probe.r_multiple * self.cfg.base.zone_score_weight
-        return ZoneTaskScore(
-            zone_quality=zone_quality,
-            probe=probe,
-            has_zone=True,
-            is_touched=(probe.status != OutcomeStatus.ZONE_NOT_TOUCHED)
-        )
+        return ZoneTaskScore(zone_quality=zone_quality, probe=probe, has_zone=True, is_touched=True)
 
     def compute_reward(self, prompt: Any, completion: str, future_bins: Sequence[Sequence[int]]) -> float:
         reward = 0.0
-        
+
         parse_result: ParseResult = Parser.from_text(self.cfg, prompt + " " + completion).parse()
         program = parse_result.ast
         common_result: CommonGateResult = self.common_check(parse_result, program)
@@ -247,15 +266,15 @@ class TLangReward:
                     zone_type=None,
                     zone_quality=None,
                     buff_applied=None,
-                    is_touched=None
+                    is_touched=None,
                 )
                 self.stats_collector.log(meta)
             return reward
-        
-        
+
         zone_score: ZoneTaskScore = self.zone_score(program, future_bins)
         zone_type = self._get_zone_type(program)
-        
+
+        buff: Optional[float] = None
         if self.buff_controller is not None:
             buff = self.buff_controller.get_buff(zone_type)
             reward = reward + zone_score.zone_quality + buff
@@ -269,8 +288,8 @@ class TLangReward:
                 semantic_passed=True,
                 zone_type=zone_type,
                 zone_quality=zone_score.zone_quality,
-                buff_applied=buff if self.buff_controller is not None else None,
-                is_touched=zone_score.is_touched
+                buff_applied=buff,
+                is_touched=zone_score.is_touched,
             )
             self.stats_collector.log(meta)
         return reward
@@ -282,11 +301,7 @@ class TLangReward:
         future_bins: Sequence[Sequence[Sequence[int]]],
         **kwargs,
     ) -> List[float]:
-        """Entry point cho GRPOTrainer(reward_funcs=...). TODO-6: hiện chưa
-        gọi bất kỳ logging/report nào — cần quyết định stats sống ở đâu
-        (attribute của self, hay module-level singleton giống
-        stats_collector_v2 bản v1) TRƯỚC khi thêm logging vào đây, để
-        tránh phải sửa lại 2 lần."""
+        """Entry point cho GRPOTrainer(reward_funcs=...)."""
         rewards = []
         for prompt, completion, future_bin in zip(prompts, completions, future_bins):
             reward = self.compute_reward(prompt, completion, future_bin)
