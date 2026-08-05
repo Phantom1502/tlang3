@@ -30,17 +30,15 @@ from typing import Any, Dict, List, Optional, Sequence
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-import torch
 from datasets import load_dataset
-from transformers import LlamaForCausalLM
 
 from app.config.schema import AppConfig
 from app.data_prepare.candle import Candle
 from app.lang.ast_nodes import ZoneNode
 from app.lang.parser import Parser
 from app.lang.semantic import SemanticChecker
-from app.tokenizer.hub import load_tokenizer
 from app.training.reward.tlang_reward import OutcomeStatus, probe_zone_quality
+from app.training.model_inference import ModelInference
 
 # Khớp LAST_N_CANDLES_TOUCH bản v1 cũ (rule D trước khi bị bỏ khỏi
 # ThinkNode) — TRÙNG với app/data_prepare/self_gen_dataset_builder.py.
@@ -49,12 +47,6 @@ from app.training.reward.tlang_reward import OutcomeStatus, probe_zone_quality
 # sửa sau này) — để tạm ở đây vì chưa chắc file kia đã có trong repo.
 LAST_N_CANDLES_TOUCH = 10 # edit thành 10 => quan sát nhiều nến hơn sau khi chạm zone
 EXTEND_ZONE_MULTIPLIER = 1
-
-def _get_zone_type(zone: Optional[ZoneNode]) -> Optional[str]:
-    if zone is None:
-        return "NO_ZONE"
-    return "SUP_ZONE" if zone.direction == "support" else "RES_ZONE"
-
 
 def _is_price_in_zone_now(chart: List[Candle], zone: ZoneNode, last_n: int = LAST_N_CANDLES_TOUCH, extend_multiplier: float = EXTEND_ZONE_MULTIPLIER) -> bool:
     """
@@ -111,32 +103,21 @@ class ZoneInference:
         self.cfg = cfg
         self.output_dir = output_dir
         self.batch_size = batch_size
-        self.max_new_tokens = max_new_tokens
-        self.do_sample = do_sample
-        self.temperature = temperature
-        self.top_p = top_p
         self.shard_size = shard_size
 
         os.makedirs(output_dir, exist_ok=True)
         self.progress_path = os.path.join(output_dir, "progress.json")
 
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-
-        # --- Tokenizer: giống quy ước eval_val.py/infer_demo.py — add_eos_token=False/
-        # add_bos_token=True (chỉ <bos>+chart khi encode prompt để generate), padding_side="left"
-        # (bắt buộc cho batch generate để phần completion luôn nối đúng ngay sau input_ids). ---
-        self.tok = load_tokenizer(repo_id=tokenizer_repo or model_repo, allow_local_fallback=False)
-        self.tok.add_eos_token = False
-        self.tok.add_bos_token = True
-        self.tok.padding_side = "left"
-
-        self.model = LlamaForCausalLM.from_pretrained(model_repo).to(self.device)
-        self.model.eval()
-        if self.model.config.vocab_size != self.tok.vocab_size:
-            raise ValueError(
-                f"model.vocab_size ({self.model.config.vocab_size}) != tokenizer.vocab_size "
-                f"({self.tok.vocab_size}) — checkpoint và tokenizer không khớp."
-            )
+        self.model: ModelInference = ModelInference(
+            model_repo, 
+            revision=None, 
+            subfolder=None, 
+            tokenizer_repo=tokenizer_repo, 
+            max_new_tokens=max_new_tokens, 
+            do_sample=do_sample, 
+            temperature=temperature, 
+            top_p=top_p
+        )
 
         self.dataset = self._load_input_dataset(dataset_repo, split)
 
@@ -179,31 +160,6 @@ class ZoneInference:
             json.dump({"next_index": self.next_index, "shard_idx": self.shard_idx}, f)
 
     # ------------------------------------------------------------------
-    # Inference — batch generate.
-    # ------------------------------------------------------------------
-    def _generate_batch(self, rows: Sequence[Dict[str, Any]]) -> List[str]:
-        prompts = [r["prompt"] for r in rows]
-        enc = self.tok(prompts, add_special_tokens=True, padding=True, return_tensors="pt")
-        input_ids = enc["input_ids"].to(self.device)
-        attention_mask = enc["attention_mask"].to(self.device)
-
-        gen_kwargs: Dict[str, Any] = dict(
-            max_new_tokens=self.max_new_tokens,
-            pad_token_id=self.tok.pad_token_id,
-            eos_token_id=self.tok.eos_token_id,
-        )
-        if self.do_sample:
-            gen_kwargs.update(do_sample=True, temperature=self.temperature, top_p=self.top_p)
-        else:
-            gen_kwargs.update(do_sample=False)
-
-        with torch.no_grad():
-            out_ids = self.model.generate(input_ids=input_ids, attention_mask=attention_mask, **gen_kwargs)
-
-        gen_ids = out_ids[:, input_ids.shape[1]:]
-        return self.tok.batch_decode(gen_ids, skip_special_tokens=True)
-
-    # ------------------------------------------------------------------
     # Verify — TÁCH RIÊNG 2 hàm theo đúng yêu cầu: 1 hàm chấm điểm (dùng
     # future_bins), 1 hàm check price-in-zone (KHÔNG dùng future_bins).
     # ------------------------------------------------------------------
@@ -223,7 +179,6 @@ class ZoneInference:
             return ScoreResult(True, False, None, None), None
 
         zone = program.think.zone
-        zone_type = _get_zone_type(zone)
         zone_quality = 0.0
         if zone is not None:
             future_candles = [Candle(*b) for b in future_bins]
@@ -236,7 +191,7 @@ class ZoneInference:
             if probe.status != OutcomeStatus.INVALID_SETUP:
                 zone_quality = probe.r_multiple
 
-        return ScoreResult(True, True, zone_type, zone_quality), program
+        return ScoreResult(True, True, program.think.zone_type, zone_quality), program
 
     def _check_price_in_zone(self, program) -> bool:
         """CHỈ gọi khi program không None và program.think.zone không None
@@ -276,7 +231,7 @@ class ZoneInference:
             end = min(self.next_index + self.batch_size, n)
             rows = [self.dataset[i] for i in range(self.next_index, end)]
 
-            completions = self._generate_batch(rows)
+            completions = self.model.generate_batch(rows)
 
             for row, completion in zip(rows, completions):
                 score, program = self._score(row["prompt"], completion, row["future_bins"])

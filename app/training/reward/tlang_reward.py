@@ -178,13 +178,6 @@ class TLangReward:
         self.buff_controller = buff_controller
         self.stats_collector = stats_collector
 
-    def _get_zone_type(self, program: ProgramNode) -> str:
-        if program.think.zone is None:
-            return "NO_ZONE"
-        if program.think.zone.direction == "support":
-            return "SUP_ZONE"
-        return "RES_ZONE"
-
     def common_check(
         self,
         parse_result: ParseResult,
@@ -272,11 +265,10 @@ class TLangReward:
             return reward
 
         zone_score: ZoneTaskScore = self.zone_score(program, future_bins)
-        zone_type = self._get_zone_type(program)
 
         buff: Optional[float] = None
         if self.buff_controller is not None:
-            buff = self.buff_controller.get_buff(zone_type)
+            buff = self.buff_controller.get_buff(program.think.zone_type)
             reward = reward + zone_score.zone_quality + buff
         else:
             reward = reward + zone_score.zone_quality
@@ -286,7 +278,7 @@ class TLangReward:
                 trend=program.think.trend if program.think else None,
                 well_formed=True,
                 semantic_passed=True,
-                zone_type=zone_type,
+                zone_type=program.think.zone_type,
                 zone_quality=zone_score.zone_quality,
                 buff_applied=buff,
                 is_touched=zone_score.is_touched,

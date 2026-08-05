@@ -26,12 +26,11 @@ from typing import Any, Dict, List, Optional, Sequence
 
 import torch
 from datasets import load_dataset
-from transformers import LlamaForCausalLM
 
 from app.config.schema import AppConfig
-from app.tokenizer.hub import load_tokenizer
 from app.training.reward.stats_collector import StatsCollector
 from app.training.reward.tlang_reward import TLangReward
+from app.training.model_inference import ModelInference
 
 ZONE_TYPES = ("NO_ZONE", "SUP_ZONE", "RES_ZONE")
 REWARD_RELEVANT_ZONE_TYPES = ("SUP_ZONE", "RES_ZONE")   # NO_ZONE trung tính, bỏ qua ở mean_reward/touch_rate
@@ -131,33 +130,17 @@ class ZoneEval:
     ):
         self.cfg = cfg
         self.batch_size = batch_size
-        self.max_new_tokens = max_new_tokens
-        self.do_sample = do_sample
-        self.temperature = temperature
-        self.top_p = top_p
-
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-
-        # --- Tokenizer: pin cùng revision với model nếu có, giữ quirk
-        # add_eos_token=False/add_bos_token=True/padding_side=left (batch generate). ---
-        self.tok = load_tokenizer(repo_id=tokenizer_repo or model_repo, revision=revision, allow_local_fallback=False)
-        self.tok.add_eos_token = False
-        self.tok.add_bos_token = True
-        self.tok.padding_side = "left"
-
-        model_kwargs: Dict[str, Any] = {}
-        if revision is not None:
-            model_kwargs["revision"] = revision
-        if subfolder is not None:
-            model_kwargs["subfolder"] = subfolder
-        self.model = LlamaForCausalLM.from_pretrained(model_repo, **model_kwargs).to(self.device)
-        self.model.eval()
-        if self.model.config.vocab_size != self.tok.vocab_size:
-            raise ValueError(
-                f"model.vocab_size ({self.model.config.vocab_size}) != tokenizer.vocab_size "
-                f"({self.tok.vocab_size}) — checkpoint và tokenizer không khớp "
-                f"(model_repo={model_repo!r}, revision={revision!r}, subfolder={subfolder!r})."
-            )
+        
+        self.model: ModelInference = ModelInference(
+            model_repo, 
+            revision, 
+            subfolder, 
+            tokenizer_repo, 
+            max_new_tokens, 
+            do_sample, 
+            temperature, 
+            top_p
+        )
 
         self.dataset = load_dataset(dataset_repo, split=split)
         if limit is not None:
@@ -177,38 +160,12 @@ class ZoneEval:
         # TLangReward có thể đổi sau này, tránh phụ thuộc ngầm vào con số đó).
         self._rewards: List[float] = []
 
-    # ------------------------------------------------------------------
-    # Inference — y hệt ZoneInference._generate_batch (khác chỗ do_sample
-    # mặc định False, dùng greedy cho eval reproducible).
-    # ------------------------------------------------------------------
-    def _generate_batch(self, rows: Sequence[Dict[str, Any]]) -> List[str]:
-        prompts = [r["prompt"] for r in rows]
-        enc = self.tok(prompts, add_special_tokens=True, padding=True, return_tensors="pt")
-        input_ids = enc["input_ids"].to(self.device)
-        attention_mask = enc["attention_mask"].to(self.device)
-
-        gen_kwargs: Dict[str, Any] = dict(
-            max_new_tokens=self.max_new_tokens,
-            pad_token_id=self.tok.pad_token_id,
-            eos_token_id=self.tok.eos_token_id,
-        )
-        if self.do_sample:
-            gen_kwargs.update(do_sample=True, temperature=self.temperature, top_p=self.top_p)
-        else:
-            gen_kwargs.update(do_sample=False)
-
-        with torch.no_grad():
-            out_ids = self.model.generate(input_ids=input_ids, attention_mask=attention_mask, **gen_kwargs)
-
-        gen_ids = out_ids[:, input_ids.shape[1]:]
-        return self.tok.batch_decode(gen_ids, skip_special_tokens=True)
-
     def run(self) -> Dict[str, Any]:
         n = len(self.dataset)
         for start in range(0, n, self.batch_size):
             end = min(start + self.batch_size, n)
             rows = [self.dataset[i] for i in range(start, end)]
-            completions = self._generate_batch(rows)
+            completions = self.model.generate_batch(rows)
 
             for row, completion in zip(rows, completions):
                 reward = self.reward_fn.compute_reward(row["prompt"], completion, row["future_bins"])
