@@ -1,12 +1,17 @@
 """
 app/training/eval/zone_eval.py — Eval độc lập cho task1 (zone-inference),
 chạy trên val split, TÁI DÙNG nguyên TLangReward (cùng công thức reward
-với train), thống kê 2 thành phần quan trọng:
+với train), thống kê 3 thành phần quan trọng:
 
     1. Tỉ lệ zone_type (NO_ZONE/SUP_ZONE/RES_ZONE) trong số completion đã
        pass gate — xem model có thiên vị 1 hướng bất thường không.
     2. Mean reward theo SUP_ZONE/RES_ZONE (NO_ZONE bỏ qua vì trung tính —
        zone_quality luôn = 0 ở đó, không có gì để so sánh chất lượng).
+    3. touch_rate theo SUP_ZONE/RES_ZONE — tỉ lệ zone THẬT SỰ được giá
+       tương lai chạm tới (điều kiện #1, xem tlang_reward.py). Đây là con
+       số phân biệt "model chọn zone hợp lệ về hình học/hướng" (đã được
+       gate A/B/B2 ép sẵn) với "model chọn zone CÓ Ý NGHĨA thực tế" (chỉ
+       zone bị chạm mới có cơ hội được task2 dùng tới).
 
 QUYẾT ĐỊNH THIẾT KẾ: dùng buff_controller=None khi eval — TLangReward đã tự
 hỗ trợ 2 chế độ (train: buff_controller!=None -> reward += buff; eval:
@@ -16,8 +21,8 @@ reward-shaping của train).
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence
 from collections import defaultdict
+from typing import Any, Dict, List, Optional, Sequence
 
 import torch
 from datasets import load_dataset
@@ -29,35 +34,46 @@ from app.training.reward.stats_collector import StatsCollector
 from app.training.reward.tlang_reward import TLangReward
 
 ZONE_TYPES = ("NO_ZONE", "SUP_ZONE", "RES_ZONE")
-REWARD_RELEVANT_ZONE_TYPES = ("SUP_ZONE", "RES_ZONE")   # NO_ZONE trung tính, bỏ qua ở mean_reward
+REWARD_RELEVANT_ZONE_TYPES = ("SUP_ZONE", "RES_ZONE")   # NO_ZONE trung tính, bỏ qua ở mean_reward/touch_rate
+
 
 def print_zone_quality_histogram(
-    stats_collector,
+    stats_collector: StatsCollector,
     zone_score_weight: float,
     rr_max: int,
-    zone_types: Sequence[str] = ("SUP_ZONE", "RES_ZONE"),
+    zone_types: Sequence[str] = REWARD_RELEVANT_ZONE_TYPES,
 ) -> None:
     """
     Bucket zone_quality (đã nhân weight, đúng thang với mean_reward) VỀ LẠI
     số R nguyên gần nhất (0R, 1R, 2R, ..., rr_maxR) bằng cách chia ngược
-    cho zone_score_weight rồi round — group theo R để đọc trực quan, KHÔNG
-    group theo điểm zone_quality trần trụi (0.1, 0.2... khó hình dung hơn
-    "1R, 2R...").
+    cho zone_score_weight rồi round — group theo R để đọc trực quan.
+
+    QUAN TRỌNG: TÁCH RIÊNG "NOT_TOUCHED" (zone không bao giờ được giá
+    tương lai chạm tới trong outcome_horizon) khỏi bucket "0R" (zone CÓ
+    chạm nhưng thua ngay khi vừa vào lệnh) — 2 cái này CÙNG có
+    zone_quality=0.0 nên trước khi có field is_touched sẽ bị gộp lẫn vào
+    nhau, đọc sai hoàn toàn ý nghĩa (0R cao có thể là "model hay đặt zone
+    không ai chạm tới" chứ không phải "model hay chọn sai hướng rồi bị
+    quét SL" — 2 vấn đề cần 2 hướng sửa khác hẳn nhau).
     """
     if zone_score_weight <= 0:
         print("zone_score_weight <= 0 — không thể quy đổi ngược về R, bỏ qua histogram.")
         return
 
-    per_type_counts = {zt: defaultdict(int) for zt in zone_types}
+    per_type_r_counts = {zt: defaultdict(int) for zt in zone_types}
+    per_type_not_touched = {zt: 0 for zt in zone_types}
     per_type_total = {zt: 0 for zt in zone_types}
 
     for r in stats_collector._records:
         if r.zone_type not in zone_types or r.zone_quality is None:
             continue
+        per_type_total[r.zone_type] += 1
+        if r.is_touched is False:
+            per_type_not_touched[r.zone_type] += 1
+            continue
         r_multiple_approx = round(r.zone_quality / zone_score_weight)
         r_multiple_approx = max(0, min(rr_max, r_multiple_approx))   # kẹp về [0, rr_max] phòng sai số round
-        per_type_counts[r.zone_type][r_multiple_approx] += 1
-        per_type_total[r.zone_type] += 1
+        per_type_r_counts[r.zone_type][r_multiple_approx] += 1
 
     print("\n=== Phân phối zone_quality theo bội số R (SUP/RES) ===")
     for zt in zone_types:
@@ -66,16 +82,23 @@ def print_zone_quality_histogram(
         if total == 0:
             print("  (không có sample nào)")
             continue
+
+        n_not_touched = per_type_not_touched[zt]
+        ratio_not_touched = n_not_touched / total
+        bar_nt = "#" * int(ratio_not_touched * 40)
+        print(f"  KHÔNG CHẠM  count={n_not_touched:<6} ratio={ratio_not_touched * 100:5.1f}%  {bar_nt}")
+
         for r_level in range(0, rr_max + 1):
-            n = per_type_counts[zt].get(r_level, 0)
+            n = per_type_r_counts[zt].get(r_level, 0)
             ratio = n / total
             bar = "#" * int(ratio * 40)
             print(f"  {r_level:>2}R  count={n:<6} ratio={ratio * 100:5.1f}%  {bar}")
 
-        n_at_cap = per_type_counts[zt].get(rr_max, 0)
+        n_at_cap = per_type_r_counts[zt].get(rr_max, 0)
+        n_zero_touched = per_type_r_counts[zt].get(0, 0)
         print(f"  -> tỉ lệ chạm cap ({rr_max}R): {n_at_cap / total * 100:.1f}%")
-        n_zero = per_type_counts[zt].get(0, 0)
-        print(f"  -> tỉ lệ zone_quality=0 (chạm SL gần như ngay): {n_zero / total * 100:.1f}%")
+        print(f"  -> tỉ lệ CHẠM zone nhưng thua ngay (0R, KHÁC 'không chạm'): {n_zero_touched / total * 100:.1f}%")
+
 
 class ZoneEval:
     """
@@ -143,7 +166,9 @@ class ZoneEval:
         # --- Eval mode: buff_controller=None -> TLangReward tự bỏ hẳn phần
         # buff (reward = gate_score + zone_quality), KHÔNG cần dựng
         # EMABuffController giả lập = 0 nữa (TLangReward đã tự xử lý case
-        # này qua tham số buff_controller Optional). ---
+        # này qua tham số buff_controller Optional). round_config KHÔNG
+        # cần truyền nữa — zone_score_weight đã chuyển hẳn vào
+        # cfg.base.zone_score_weight (xem tlang_reward.py). ---
         self.stats_collector = StatsCollector()
         self.reward_fn = TLangReward(cfg, buff_controller=None, stats_collector=self.stats_collector)
 
@@ -194,7 +219,7 @@ class ZoneEval:
         return self.summarize()
 
     # ------------------------------------------------------------------
-    # Thống kê — 2 thành phần theo đúng yêu cầu.
+    # Thống kê — 3 thành phần theo đúng yêu cầu.
     # ------------------------------------------------------------------
     def summarize(self) -> Dict[str, Any]:
         records = self.stats_collector._records
@@ -213,6 +238,8 @@ class ZoneEval:
             ]
             mean_reward[zt] = (sum(rewards) / len(rewards)) if rewards else None
 
+        touch_rate = self.stats_collector.touch_rate_by_zone_type()
+
         n_wf = sum(1 for r in records if r.well_formed)
         n_sem = sum(1 for r in records if r.well_formed and r.semantic_passed)
 
@@ -222,6 +249,7 @@ class ZoneEval:
             "semantic_pass_rate_given_well_formed": (n_sem / n_wf) if n_wf else 0.0,
             "zone_type_ratio": zone_type_ratio,
             "mean_reward": mean_reward,
+            "touch_rate": touch_rate,
         }
 
     def print_summary(self) -> None:
@@ -236,10 +264,16 @@ class ZoneEval:
             ratio = result["zone_type_ratio"][zt]
             print(f"  {zt:<10} ratio={ratio * 100:5.1f}%")
 
+        print("\n-- Tỉ lệ zone THẬT SỰ được chạm (SUP/RES — điều kiện #1) --")
+        for zt in REWARD_RELEVANT_ZONE_TYPES:
+            rate = result["touch_rate"].get(zt)
+            rate_str = f"{rate * 100:.1f}%" if rate is not None else "-"
+            print(f"  {zt:<10} touch_rate={rate_str}")
+
         print("\n-- Mean reward theo zone_type (SUP/RES — NO_ZONE bỏ qua vì trung tính) --")
         for zt in REWARD_RELEVANT_ZONE_TYPES:
             mr = result["mean_reward"][zt]
             mr_str = f"{mr:.4f}" if mr is not None else "-"
             print(f"  {zt:<10} mean_reward={mr_str}")
-            
+
         print_zone_quality_histogram(self.stats_collector, self.cfg.base.zone_score_weight, self.cfg.base.rr_max)
