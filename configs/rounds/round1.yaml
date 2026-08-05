@@ -7,7 +7,7 @@ zone_buffs:
   NO_ZONE:
     buff_min: 0.2
     buff_max: 0.12
-    buff_init: 0.0
+    buff_init: 0.2
     target_ratio: 0.2
   SUP_ZONE:
     buff_min: 0.00
