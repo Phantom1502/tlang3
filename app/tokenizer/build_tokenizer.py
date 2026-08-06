@@ -36,8 +36,10 @@ from tokenizers.models import WordLevel
 from tokenizers.pre_tokenizers import WhitespaceSplit
 from tokenizers.processors import TemplateProcessing
 from transformers import PreTrainedTokenizerFast
-from app.config.loader import load_config
-from app.config.schema import AppConfig
+from app.config import (
+    AppConfig,
+    load_config,
+)
 
 from app.tokenizer.vocab_builder import (
     BOS_TOKEN,

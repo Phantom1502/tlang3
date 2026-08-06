@@ -24,13 +24,14 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Sequence
 
-import torch
 from datasets import load_dataset
 
-from app.config.schema import AppConfig
-from app.training.reward.stats_collector import StatsCollector
-from app.training.reward.tlang_reward import TLangReward
-from app.training.model_inference import ModelInference
+from app.config import AppConfig
+from app.training.reward import (
+    StatsCollector,
+    TLangReward,
+)
+from app.inference import ModelInference
 
 ZONE_TYPES = ("NO_ZONE", "SUP_ZONE", "RES_ZONE")
 REWARD_RELEVANT_ZONE_TYPES = ("SUP_ZONE", "RES_ZONE")   # NO_ZONE trung tính, bỏ qua ở mean_reward/touch_rate

@@ -15,8 +15,6 @@ from typing import Optional
 
 logger = logging.getLogger("app.train.common")
 
-from app.config.schema import AppConfig, TrainingConfig
-
 HUB_CHECKPOINT_SUBFOLDER = "last-checkpoint"  # thư mục con mà hub_strategy="checkpoint" push vào
 
 def print_device_info():

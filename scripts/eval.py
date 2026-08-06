@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import argparse
 
-from app.config.schema import AppConfig
-from app.training.zone_eval import ZoneEval
+from app.config import AppConfig, load_config
+from app.inference import ZoneEval
 
 def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -56,7 +56,5 @@ def main(cfg: AppConfig):
     zone_eval.print_summary()
 
 if __name__ == "__main__":   
-    from app.config.loader import load_config
-        
     cfg : AppConfig = load_config("configs")
     main(cfg)

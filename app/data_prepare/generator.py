@@ -7,14 +7,12 @@ from typing import List, Optional, Tuple
 from app.data_prepare.candle import Candle
 from app.lang import (
     ASTVisitor,
-    CandleNode,
-    ChartNode,
     ThinkNode,
     ZoneNode,
     SemanticChecker,
     Parser
 )
-from app.config.schema import (
+from app.config import (
     AppConfig,
     BaseConfig,
 )

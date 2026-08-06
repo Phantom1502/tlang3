@@ -7,7 +7,13 @@ import os
 logger = logging.getLogger("train_grpo")
 logging.basicConfig(level=logging.INFO, format="[%(name)s] %(message)s")
 
-from app.config.schema import AppConfig, RoundConfig
+from app.config import (
+    AppConfig, 
+    RoundConfig,
+    get_train_cfg,
+    get_round_config,
+    load_config
+)
 
 def _seed_from_round_id(round_id: str) -> int:
     import hashlib
@@ -61,16 +67,18 @@ def main(cfg: AppConfig):
         print("--repo_id và --dataset_name bắt buộc khi train thật.")
         raise SystemExit(1)
     
-    from app.config.loader import get_train_cfg, get_round_config
     from app.training.common import resolve_resume_checkpoint, print_device_info
-    from app.tokenizer.hub import load_tokenizer
-    from app.training.model.model_loader import ModelLoader
+    from app.tokenizer import load_tokenizer
+    from app.training.model import ModelLoader
     from datasets import load_dataset
     from trl import GRPOConfig, GRPOTrainer
-    from app.training.reward.tlang_reward import TLangReward
-    from app.training.reward.stats_collector import StatsCollector, stats_path_for_rank
-    from app.training.reward.zone_buff_controller import EMABuffController
-    from app.training.reward.stats_persist_callback import StatsPersistCallback
+    from app.training.reward import (
+        TLangReward, 
+        StatsCollector, 
+        EMABuffController, 
+        StatsPersistCallback,
+        stats_path_for_rank
+    )
         
     os.makedirs(args.output_dir, exist_ok=True)
     print_device_info()
@@ -255,7 +263,5 @@ def main(cfg: AppConfig):
         stats_collector.print_summary()
         
 if __name__ == "__main__":
-    from app.config.loader import load_config
-    
     cfg : AppConfig = load_config("configs")
     main(cfg)

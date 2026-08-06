@@ -292,7 +292,7 @@ def main() -> None:
             "truyền --ids_repo_id trỏ 1 repo khác để tránh việc này."
         )
 
-    from app.tokenizer.hub import load_tokenizer
+    from app.tokenizer import load_tokenizer
     tok = load_tokenizer(repo_id=args.tokenizer_repo, allow_local_fallback=False)
     logger.info(f"tokenizer vocab_size = {tok.vocab_size}")
 

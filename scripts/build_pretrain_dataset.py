@@ -3,11 +3,9 @@ import numpy as np
 
 from typing import List
 import pyarrow as pa
-from app.data_prepare.candle import Candle
-from app.config.loader import load_config, get_scale
-from app.config.schema import AppConfig, WindowConfig
-from app.data_prepare.chartcodec import ChartCodec
-from app.data_prepare.dataset_builder import DatasetBuilder
+from app.config import load_config, get_scale
+from app.data_prepare import ChartCodec
+from app.data_prepare import DatasetBuilder
 from app.utils.parquet_writer import ParquetWriterUtil
 from tqdm.auto import tqdm  # Thêm dòng này
 
@@ -15,8 +13,8 @@ class ZonePretrainOneFileGen:
     def __init__(
         self, 
         cfg, 
-        codec, 
-        builder, 
+        codec: ChartCodec, 
+        builder: DatasetBuilder, 
         file: str, 
         samples_per_chart: int = 4,
         n_augments: int = 0,
@@ -56,7 +54,11 @@ class ZonePretrainOneFileGen:
             window = self.df.iloc[i : i + self.cfg.window.window_size]
             candles = self.codec.encode_window(window, anchor_open, anchor_atr)
             
-            rows = self.builder.build_pretrain_rows(candles, self.samples_per_chart, self.n_augments)
+            rows = self.builder.build_pretrain_rows(
+                candles, 
+                self.samples_per_chart, 
+                self.n_augments
+            )
             batch.extend(rows)
             
             # Nếu mẻ dữ liệu đủ lớn, đẩy (yield) ra ngoài và reset lại mẻ

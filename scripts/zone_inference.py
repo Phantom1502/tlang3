@@ -26,19 +26,22 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Optional, Sequence, List
 
 import pyarrow as pa
 import pyarrow.parquet as pq
 from datasets import load_dataset
 
-from app.config.schema import AppConfig
-from app.data_prepare.candle import Candle
-from app.lang.ast_nodes import ZoneNode
-from app.lang.parser import Parser
-from app.lang.semantic import SemanticChecker
+from app.config import AppConfig
+from app.data_prepare import Candle
+
+from app.lang import (
+    ZoneNode,
+    Parser,
+    SemanticChecker
+)
 from app.training.reward.tlang_reward import OutcomeStatus, probe_zone_quality
-from app.training.model_inference import ModelInference
+from app.inference import ModelInference
 
 # Khớp LAST_N_CANDLES_TOUCH bản v1 cũ (rule D trước khi bị bỏ khỏi
 # ThinkNode) — TRÙNG với app/data_prepare/self_gen_dataset_builder.py.

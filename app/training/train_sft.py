@@ -6,7 +6,11 @@ import logging
 logger = logging.getLogger("train_sft")
 logging.basicConfig(level=logging.INFO, format="[%(name)s] %(message)s")
 
-from app.config.schema import AppConfig
+from app.config import (
+    AppConfig,
+    get_train_cfg,
+    load_config
+)
 
 def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -39,11 +43,10 @@ def main(cfg: AppConfig) -> None:
     import os
     
     from transformers import Trainer, TrainingArguments
-    from app.tokenizer.hub import load_tokenizer
+    from app.tokenizer import load_tokenizer
     from app.training.common import resolve_resume_checkpoint, print_device_info
-    from app.training.data.data_module import DataArguments, make_data_module
-    from app.training.model.model_loader import ModelLoader
-    from app.config.loader import get_train_cfg
+    from app.training.data import DataArguments, make_data_module
+    from app.training.model import ModelLoader
     
     os.makedirs(args.output_dir, exist_ok=True)
     print_device_info()
@@ -123,7 +126,5 @@ def main(cfg: AppConfig) -> None:
         logger.info(f"push_to_hub tắt — checkpoint final chỉ lưu local tại {args.output_dir}")
 
 if __name__ == "__main__":
-    from app.config.loader import load_config
-    
     cfg : AppConfig = load_config("configs")
     main(cfg)

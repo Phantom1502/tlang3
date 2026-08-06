@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Sequence
 import torch
 from transformers import LlamaForCausalLM
 
-from app.tokenizer.hub import load_tokenizer
+from app.tokenizer import load_tokenizer
 
 class ModelInference:
     def __init__(

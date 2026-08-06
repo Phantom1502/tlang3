@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import random
-import re
 from typing import List, Optional, Tuple
 
 from .candle import Candle, augment_shift
-from app.config.schema import (
+from app.config import (
     AppConfig,
     BaseConfig,
     WindowConfig
@@ -48,7 +47,13 @@ class DatasetBuilder:
         
         return [{"prompt": s.prompt, "completion": s.completion} for s in samples]
     
-    def build_grpo_rows(self, chart: List[Candle], symbol: str, index: int, n_augments: int = 0):
+    def build_grpo_rows(
+        self, 
+        chart: List[Candle], 
+        symbol: str, 
+        index: int, 
+        n_augments: int = 0
+    ):
         rows: List[dict] = []
 
         variants: List[Tuple[str, List[Candle]]] = [(f"{symbol}_{index}", chart)]
