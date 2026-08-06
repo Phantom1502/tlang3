@@ -203,7 +203,7 @@ class Parser:
         c = self._expect_bin(TokenType.CANDLE_C, "C")
         if None in (o, h, l, c):
             return None
-        return CandleNode(o=o, h=h, l=l, c=c)
+        return CandleNode(open=o, high=h, low=l, close=c)
 
     def _expect_bin(self, token_type: TokenType, label: str) -> Optional[int]:
         if not self._check(token_type):

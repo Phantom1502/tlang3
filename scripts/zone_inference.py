@@ -45,10 +45,9 @@ from app.training.model_inference import ModelInference
 # NẾU đã có file đó trong repo, NÊN import lại từ đó thay vì định nghĩa
 # song song ở đây (tránh 2 nơi định nghĩa cùng 1 logic rồi lệch nhau khi
 # sửa sau này) — để tạm ở đây vì chưa chắc file kia đã có trong repo.
-LAST_N_CANDLES_TOUCH = 10 # edit thành 10 => quan sát nhiều nến hơn sau khi chạm zone
 EXTEND_ZONE_MULTIPLIER = 1
 
-def _is_price_in_zone_now(chart: List[Candle], zone: ZoneNode, last_n: int = LAST_N_CANDLES_TOUCH, extend_multiplier: float = EXTEND_ZONE_MULTIPLIER) -> bool:
+def _is_price_in_zone_now(chart: List[Candle], zone: ZoneNode, last_n: int, extend_multiplier: float = EXTEND_ZONE_MULTIPLIER) -> bool:
     """
     Điều kiện để pass qua action model:
     - trong vòng n nến cuối giá phải chạm zone
@@ -75,7 +74,7 @@ class ScoreResult:
     semantic_passed: bool
     zone_type: Optional[str]
     zone_quality: Optional[float]   # raw r_multiple, None nếu chưa pass gate
-
+    zone_touched: Optional[bool]    # None nếu không có zone
 
 class ZoneInference:
     """
@@ -131,6 +130,7 @@ class ZoneInference:
             ("semantic_passed", pa.bool_()),
             ("zone_type", pa.string()),
             ("zone_quality", pa.float32()),
+            ("zone_touched", pa.bool_()),
             ("price_in_zone_now", pa.bool_()),
         ])
 
@@ -168,7 +168,7 @@ class ZoneInference:
         — caller (_check_price_in_zone) cần program để lấy chart+zone."""
         parse_result = Parser.from_text(self.cfg, prompt + " " + completion).parse()
         if not parse_result.is_well_formed():
-            return ScoreResult(False, False, None, None), None
+            return ScoreResult(False, False, None, None, None), None
 
         program = parse_result.ast
         semantic_result = SemanticChecker(
@@ -176,10 +176,11 @@ class ZoneInference:
             zone_width_max_bins=self.cfg.base.zone_width_max_bins,
         ).check(program)
         if not semantic_result.passed:
-            return ScoreResult(True, False, None, None), None
+            return ScoreResult(True, False, None, None, None), None
 
         zone = program.think.zone
         zone_quality = 0.0
+        zone_touched: Optional[bool] = None
         if zone is not None:
             future_candles = [Candle(*b) for b in future_bins]
             probe = probe_zone_quality(
@@ -190,8 +191,9 @@ class ZoneInference:
             )
             if probe.status != OutcomeStatus.INVALID_SETUP:
                 zone_quality = probe.r_multiple
+                zone_touched = (probe.status != OutcomeStatus.ZONE_NOT_TOUCHED)
 
-        return ScoreResult(True, True, program.think.zone_type, zone_quality), program
+        return ScoreResult(True, True, program.think.zone_type, zone_quality, zone_touched), program
 
     def _check_price_in_zone(self, program) -> bool:
         """CHỈ gọi khi program không None và program.think.zone không None
@@ -250,6 +252,7 @@ class ZoneInference:
                     "semantic_passed": score.semantic_passed,
                     "zone_type": score.zone_type,
                     "zone_quality": score.zone_quality,
+                    "zone_touched": score.zone_touched,
                     "price_in_zone_now": price_in_zone_now,
                 })
 

@@ -9,15 +9,21 @@ class Candle:
     low: int
     close: int
     
-def render_chart_block(candles: List[Candle]) -> str:
-    """[(o,h,l,c), ...] -> '<chart> <O_x> <H_x> <L_x> <C_x> ... </chart>'
-    ĐÚNG format atomic hiện tại của grammar (app/lang/lexer.py CANDLE_O/H/L/C:
-    r"<O_\\d+>" ...) — khác hẳn format thô không ngoặc của ChartCodec."""
-    parts = ["<chart>"]
-    for candle in candles:
-        parts.extend([f"<O_{candle.open}>", f"<H_{candle.high}>", f"<L_{candle.low}>", f"<C_{candle.close}>"])
-    parts.append("</chart>")
-    return " ".join(parts)
+    @property
+    def o(self) -> int: 
+        return self.open
+    
+    @property
+    def h(self) -> int: 
+        return self.high
+    
+    @property
+    def l(self) -> int: 
+        return self.low
+    
+    @property
+    def c(self) -> int: 
+        return self.close
 
 def augment_shift(
     candles: List[Candle],

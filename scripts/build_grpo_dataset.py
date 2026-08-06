@@ -117,7 +117,7 @@ class ZoneGRPOGen:
         print(f"Thành công! Toàn bộ quá trình hoàn tất. Có tổng cộng {total_rows} dòng.")
         
 def build_train_ds():
-    output_path = "data/pretrain/zone_grpo_train.parquet"
+    output_path = "data/pretrain/zone_sft_re_train_raw.parquet"
     inputs = [
         ("XAUUSD", "M1", "data/preprocessed/train/XAUUSD_1Min.csv"),
         ("XAUUSD", "M5", "data/preprocessed/train/XAUUSD_5Min.csv"),
@@ -140,12 +140,12 @@ def build_train_ds():
     gen = ZoneGRPOGen(output_path)
     gen.generate(
         inputs,
-        n_augments=1,
-        stride=10
+        n_augments=0,
+        stride=11
     )
     
 def build_val_ds():
-    output_path = "data/pretrain/zone_grpo_val.parquet"
+    output_path = "data/pretrain/zone_sft_re_val_raw.parquet"
     inputs = [
         ("XAUUSD", "M1", "data/preprocessed/val/XAUUSD_1Min.csv"),
         ("EURUSD", "M1", "data/preprocessed/val/EURUSD_1Min.csv"),
@@ -154,8 +154,8 @@ def build_val_ds():
     gen = ZoneGRPOGen(output_path)
     gen.generate(
         inputs,
-        n_augments=1,
-        stride=10
+        n_augments=0,
+        stride=11
     )
         
 if __name__ == "__main__":

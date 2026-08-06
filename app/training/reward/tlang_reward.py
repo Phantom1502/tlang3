@@ -142,8 +142,12 @@ def probe_zone_quality(
 
     remaining_horizon = outcome_horizon - touch_idx
     target = measure_max_favorable_r(
-        entry, sl, future_candles[touch_idx:], direction,
-        outcome_horizon=remaining_horizon, cap=cap,
+        entry, 
+        sl, 
+        future_candles[touch_idx:], 
+        direction,
+        outcome_horizon=remaining_horizon, 
+        cap=cap,
     )
     return ForwardTestResult(status=OutcomeStatus.WIN, r_multiple=target)
 

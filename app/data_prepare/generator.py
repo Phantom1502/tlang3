@@ -4,10 +4,16 @@ import random
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
-from app.data_prepare.candle import Candle, render_chart_block
-from app.lang.ast_nodes import ThinkNode, ZoneNode
-from app.lang.parser import Parser
-from app.lang.semantic import SemanticChecker
+from app.data_prepare.candle import Candle
+from app.lang import (
+    ASTVisitor,
+    CandleNode,
+    ChartNode,
+    ThinkNode,
+    ZoneNode,
+    SemanticChecker,
+    Parser
+)
 from app.config.schema import (
     AppConfig,
     BaseConfig,
@@ -42,9 +48,6 @@ LEAF_RECIPES: List[Tuple[str, Optional[str]]] = [
     ("RANGE", None),
 ]
 
-def _digits(n: int, pad: int) -> List[str]:
-    return list(str(n).zfill(pad))
-
 class ZoneGenerator:
     def __init__(self, cfg: AppConfig, seed: Optional[int] = None) -> None:
         self.cfg = cfg
@@ -54,9 +57,9 @@ class ZoneGenerator:
         self.zone_max = base_cfg.zone_width_max_bins
         self.bin_min = base_cfg.bin_min
         self.bin_max = base_cfg.bin_max
-        self.digit_pad = base_cfg.digit_pad
         
         self._random = random.Random(seed)
+        self._visitor = ASTVisitor(digit_pad=cfg.base.digit_pad)
         
     def _pick_zone(
         self, 
@@ -79,16 +82,6 @@ class ZoneGenerator:
             return ZoneNode(direction="resistance", lower_bin=lower, upper_bin=upper)
         
         return None
-    
-    def _build_completion_text(self, think: ThinkNode) -> str:
-        parts = ["<think>", f"<trend>{think.trend}</trend>", "<current_price>", *_digits(think.current_price_bin, pad=self.digit_pad), "</current_price>"]
-        
-        if think.zone is not None:
-            tag = "zone_support" if think.zone.direction == "support" else "zone_resistance"
-            parts += [f"<{tag}>", *_digits(think.zone.lower_bin, pad=self.digit_pad), ":", *_digits(think.zone.upper_bin, pad=self.digit_pad), f"</{tag}>"]
-        parts.append("</think>")
-        
-        return " ".join(parts)
 
     def generate_one(
         self, 
@@ -111,8 +104,8 @@ class ZoneGenerator:
                 
                 think.zone = zone
         
-            completion = self._build_completion_text(think)
-            prompt = render_chart_block(candles)
+            completion = self._visitor.build_completion(think)
+            prompt = self._visitor.render_chart_block(candles)
             
             full_text = prompt + " " + completion
             parse_result = Parser.from_text(self.cfg,full_text).parse()

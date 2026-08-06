@@ -2,15 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import List, Optional
+from app.data_prepare.candle import Candle
 
-
-@dataclass
-class CandleNode:
-    o: int
-    h: int
-    l: int
-    c: int
-
+CandleNode = Candle
 
 @dataclass
 class ChartNode:
