@@ -5,17 +5,17 @@ kd: 0.001
 step_max: 0.001
 zone_buffs:
   NO_ZONE:
-    buff_min: 0.05
-    buff_max: 0.15
-    buff_init: 0.10
-    target_ratio: 0.2
+    buff_min: 0.10
+    buff_max: 0.20
+    buff_init: 0.15
+    target_ratio: 0.1
   SUP_ZONE:
     buff_min: 0.00
     buff_max: 0.06
     buff_init: 0.00
-    target_ratio: 0.4
+    target_ratio: 0.3
   RES_ZONE:
     buff_min: 0.00
     buff_max: 0.06
     buff_init: 0.00
-    target_ratio: 0.4
+    target_ratio: 0.3
