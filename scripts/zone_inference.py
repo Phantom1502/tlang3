@@ -93,6 +93,8 @@ class ZoneInference:
         model_repo: str,
         dataset_repo: str,
         output_dir: str,
+        revision: Optional[str] = None,
+        subfolder: Optional[str] = None,
         split: str = "train",
         tokenizer_repo: Optional[str] = None,
         batch_size: int = 16,
@@ -112,8 +114,8 @@ class ZoneInference:
 
         self.model: ModelInference = ModelInference(
             model_repo, 
-            revision=None, 
-            subfolder=None, 
+            revision=revision, 
+            subfolder=subfolder, 
             tokenizer_repo=tokenizer_repo, 
             max_new_tokens=max_new_tokens, 
             do_sample=do_sample, 
