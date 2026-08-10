@@ -100,8 +100,6 @@ class StatsCollector:
             entry["count"] += 1
             if r.zone_quality is not None:
                 entry["zone_qualities"].append(r.zone_quality)
-            if r.buff_applied is not None:
-                entry["buffs"].append(r.buff_applied)
             if r.is_touched is not None:
                 entry["touched"].append(r.is_touched)
 
