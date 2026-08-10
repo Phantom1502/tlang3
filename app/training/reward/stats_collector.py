@@ -90,7 +90,7 @@ class StatsCollector:
         """
         by_trend_total: Dict[str, int] = defaultdict(int)
         raw: Dict[str, Dict[str, dict]] = defaultdict(
-            lambda: defaultdict(lambda: {"count": 0, "zone_qualities": [], "buffs": [], "touched": []})
+            lambda: defaultdict(lambda: {"count": 0, "zone_qualities": [], "touched": []})
         )
         for r in self._records:
             if r.trend is None or not (r.well_formed and r.semantic_passed) or r.zone_type is None:
