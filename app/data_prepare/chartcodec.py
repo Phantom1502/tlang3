@@ -25,7 +25,13 @@ class ChartCodec:
         price = anchor_open + norm * self.scale * anchor_atr
         return price
     
-    def encode_window(self, window_df: pd.DataFrame, anchor_open, anchor_atr) -> List[Candle]:
+    def encode_window(self, window_df: pd.DataFrame, anchor_atr) -> List[Candle]:
+        max_high = window_df['High'].max()
+        min_low = window_df['Low'].min()
+        
+        # 2. Xác định tâm đối xứng của window
+        anchor_open = (max_high + min_low) / 2.0
+        
         candles = []
         for _, row in window_df.iterrows():
             o = self.quantize_price(row['Open'], anchor_open, anchor_atr)
@@ -34,7 +40,7 @@ class ChartCodec:
             c = self.quantize_price(row['Close'], anchor_open, anchor_atr)
             candles.append(Candle(o, h, l, c))
             
-        return candles
+        return candles, anchor_open
     
     def decode_window(self, text: str, anchor_open, anchor_atr) -> str:
         buckets = {"O": [], "H": [], "L": [], "C": []}

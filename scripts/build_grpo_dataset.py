@@ -43,7 +43,6 @@ class ZoneGRPOOneFileGen:
         
         for count in tqdm(range(self._length), desc=self.desc, leave=False, unit="win"):
             i = count * self.stride
-            anchor_open = opens[i]
             anchor_atr = atrs[i]
             
             if anchor_atr <= 0 or np.isnan(anchor_atr):
@@ -51,7 +50,7 @@ class ZoneGRPOOneFileGen:
                 
             # Cắt cửa sổ (pandas slice still takes a little time, but acceptable)
             window = self.df.iloc[i : i + self.cfg.window.window_size]
-            candles = self.codec.encode_window(window, anchor_open, anchor_atr)
+            candles, anchor_open = self.codec.encode_window(window, anchor_atr)
             
             rows = self.builder.build_grpo_rows(
                 candles, 
@@ -156,4 +155,5 @@ def build_val_ds():
     )
         
 if __name__ == "__main__":
+    build_train_ds()
     build_val_ds()
