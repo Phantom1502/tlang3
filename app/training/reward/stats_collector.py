@@ -152,11 +152,10 @@ class StatsCollector:
             print(f"trend={trend}")
             for zone_type, stat in zone_types.items():
                 avg_zq = f"{stat['avg_zone_quality']:.3f}" if stat["avg_zone_quality"] is not None else "-"
-                avg_buff = f"{stat['avg_buff']:.3f}" if stat["avg_buff"] is not None else "-"
                 touch_rate = f"{stat['touch_rate']*100:.1f}%" if stat["touch_rate"] is not None else "-"
                 print(
                     f"  {zone_type:<10} count={stat['count']:<6} freq={stat['freq_within_trend']*100:5.1f}%  "
-                    f"avg_zone_quality={avg_zq:>7}  avg_buff={avg_buff:>7}  touch_rate={touch_rate:>6}"
+                    f"avg_zone_quality={avg_zq:>7} touch_rate={touch_rate:>6}"
                 )
 
         print("\n-- Zone_type counts (toàn bộ lịch sử từ lần reset gần nhất, đã pass gate) --")
