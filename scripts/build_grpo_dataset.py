@@ -136,8 +136,8 @@ def build_train_ds():
     gen = ZoneGRPOGen(output_path)
     gen.generate(
         inputs,
-        n_augments=0,
-        stride=11
+        n_augments=0,# 4 for build dataset
+        stride=11 # 10 for build dataset
     )
     
 def build_val_ds():
@@ -150,8 +150,8 @@ def build_val_ds():
     gen = ZoneGRPOGen(output_path)
     gen.generate(
         inputs,
-        n_augments=0,
-        stride=11
+        n_augments=0, # 4 for build dataset
+        stride=11 # 10 for build dataset
     )
         
 if __name__ == "__main__":

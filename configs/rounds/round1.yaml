@@ -3,6 +3,12 @@ alpha: 0.15
 kp: 0.001
 kd: 0.001
 step_max: 0.001
+zone_entropy_floor: 0.25
+zone_entropy_ema_alpha: 0.9
+zone_entropy_kp: 0.02
+zone_entropy_kd: 0.01
+zone_entropy_bonus_step_max: 0.0005
+zone_entropy_bonus_cap: 0.1
 zone_buffs:
   NO_ZONE:
     buff_min: 0.15

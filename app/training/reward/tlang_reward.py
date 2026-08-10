@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import math
+
 from dataclasses import dataclass
-from typing import Any, List, Optional, Sequence
+from typing import Any, List, Optional, Sequence, Tuple, Dict
 from enum import Enum
+from collections import defaultdict, Counter
 
 from app.config.schema import AppConfig, RoundConfig
 from app.data_prepare.candle import Candle
@@ -10,7 +13,7 @@ from app.lang.ast_nodes import ProgramNode, ZoneNode
 from app.lang.parser import Parser, ParseResult
 from app.lang.semantic import SemanticChecker, SemanticResult
 from app.training.reward.stats_collector import StatsCollector, TaskRolloutMeta
-from app.training.reward.zone_buff_controller import EMABuffController
+from app.training.reward.zone_entropy_controller import ZoneEntropyController, MIN_SAMPLES_PER_GROUP_FOR_ENTROPY
 
 # Số bin đệm giữa SL "giả lập" và mép zone khi probe chất lượng zone — SL đặt
 # NGAY SÁT ngoài zone (mép đối diện với entry) để mô phỏng "vào lệnh ngay khi
@@ -174,12 +177,12 @@ class TLangReward:
                                                          # số này lại (không xoá) để không phá vỡ chữ ký hàm
                                                          # ở các call site đã có (train_grpo.py, ZoneEval) —
                                                          # xoá thật sự CẦN sửa đồng thời mọi nơi gọi.
-        buff_controller: Optional[EMABuffController] = None,
+        entropy_controller: Optional[ZoneEntropyController] = None,
         stats_collector: Optional[StatsCollector] = None,
     ):
         self.__name__ = "TLangReward"
         self.cfg = cfg
-        self.buff_controller = buff_controller
+        self.entropy_controller = entropy_controller
         self.stats_collector = stats_collector
 
     def common_check(
@@ -247,7 +250,7 @@ class TLangReward:
         zone_quality = probe.r_multiple * self.cfg.base.zone_score_weight
         return ZoneTaskScore(zone_quality=zone_quality, probe=probe, has_zone=True, is_touched=True)
 
-    def compute_reward(self, prompt: Any, completion: str, future_bins: Sequence[Sequence[int]]) -> float:
+    def compute_reward(self, prompt: Any, completion: str, future_bins: Sequence[Sequence[int]]) -> Tuple[float, TaskRolloutMeta]:
         reward = 0.0
 
         parse_result: ParseResult = Parser.from_text(self.cfg, prompt + " " + completion).parse()
@@ -255,40 +258,32 @@ class TLangReward:
         common_result: CommonGateResult = self.common_check(parse_result, program)
         reward += common_result.gate_score
         if not common_result.passed:
-            if self.stats_collector is not None:
-                meta = TaskRolloutMeta(
-                    trend=program.think.trend if program.think else None,
-                    well_formed=parse_result.is_well_formed(),
-                    semantic_passed=False,
-                    zone_type=None,
-                    zone_quality=None,
-                    buff_applied=None,
-                    is_touched=None,
-                )
-                self.stats_collector.log(meta)
-            return reward
-
-        zone_score: ZoneTaskScore = self.zone_score(program, future_bins)
-
-        buff: Optional[float] = None
-        if self.buff_controller is not None:
-            buff = self.buff_controller.get_buff(program.think.zone_type)
-            reward = reward + zone_score.zone_quality + buff
-        else:
-            reward = reward + zone_score.zone_quality
-
-        if self.stats_collector is not None:
             meta = TaskRolloutMeta(
                 trend=program.think.trend if program.think else None,
-                well_formed=True,
-                semantic_passed=True,
-                zone_type=program.think.zone_type,
-                zone_quality=zone_score.zone_quality,
-                buff_applied=buff,
-                is_touched=zone_score.is_touched,
+                well_formed=parse_result.is_well_formed(),
+                semantic_passed=False,
+                zone_type=None,
+                zone_quality=None,
+                is_touched=None,
             )
+            if self.stats_collector is not None:
+                self.stats_collector.log(meta)
+            return reward, meta
+
+        zone_score: ZoneTaskScore = self.zone_score(program, future_bins)
+        reward = reward + zone_score.zone_quality
+
+        meta = TaskRolloutMeta(
+            trend=program.think.trend if program.think else None,
+            well_formed=True,
+            semantic_passed=True,
+            zone_type=program.think.zone_type,
+            zone_quality=zone_score.zone_quality,
+            is_touched=zone_score.is_touched,
+        )
+        if self.stats_collector is not None:
             self.stats_collector.log(meta)
-        return reward
+        return reward, meta
 
     def __call__(
         self,
@@ -298,8 +293,48 @@ class TLangReward:
         **kwargs,
     ) -> List[float]:
         """Entry point cho GRPOTrainer(reward_funcs=...)."""
+        n = len(prompts)
+
+        rewards: List[float] = [0.0] * n
+        metas: List[Optional[TaskRolloutMeta]] = [None] * n
         rewards = []
-        for prompt, completion, future_bin in zip(prompts, completions, future_bins):
-            reward = self.compute_reward(prompt, completion, future_bin)
-            rewards.append(reward)
+        
+        for i in range(n):
+            reward, meta = self.compute_reward(
+                prompts[i], 
+                completions[i], 
+                future_bins[i]
+            )
+            rewards[i] = reward
+            metas[i] = meta
+        
+        groups_idx: Dict[Any, List[int]] = defaultdict(list)
+        for i, prompt in enumerate(prompts):
+            if metas[i].trend is not None and metas[i].zone_type is not None:
+                groups_idx[prompt].append(i)
+
+        strength = self.entropy_controller.get_bonus()
+        for idx_list in groups_idx.values():
+            if len(idx_list) < MIN_SAMPLES_PER_GROUP_FOR_ENTROPY:
+                continue
+
+            branch_list = [f"{metas[i].trend}|{metas[i].zone_type}" for i in idx_list]
+            h, probs = _entropy_and_probs_str(branch_list)
+            self.entropy_controller.record_entropy(h)
+
+            if strength <= 0.0:
+                continue
+
+            for i in idx_list:
+                branch_key = f"{metas[i].trend}|{metas[i].zone_type}"
+                surprisal = -math.log(probs[branch_key])
+                rewards[i] += strength * surprisal
+                
         return rewards
+    
+def _entropy_and_probs_str(values: Sequence[str]) -> Tuple[float, Dict[str, float]]:
+    n = len(values)
+    counts = Counter(values)
+    probs = {v: c / n for v, c in counts.items()}
+    h = -sum(p * math.log(p) for p in probs.values())
+    return h, probs

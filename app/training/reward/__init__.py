@@ -1,12 +1,13 @@
 from .stats_collector import StatsCollector, stats_path_for_rank
-from .zone_buff_controller import EMABuffController
+from .zone_entropy_controller import ZoneEntropyController, DEFAULT_ZONE_ENTROPY_FILENAME
 from .stats_persist_callback import StatsPersistCallback
 from .tlang_reward import TLangReward
 
 __all__ = [
     "StatsCollector", 
     "stats_path_for_rank",
-    "EMABuffController", 
+    "ZoneEntropyController", 
+    "DEFAULT_ZONE_ENTROPY_FILENAME",
     "StatsPersistCallback", 
     "TLangReward"
 ]

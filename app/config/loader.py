@@ -149,6 +149,12 @@ def _build_round_config(data: Dict[str, Any], source: str) -> RoundConfig:
         kp=_require_field(data, "kp", source),
         kd=_require_field(data, "kd", source),
         step_max=_require_field(data, "step_max", source),
+        zone_entropy_floor=_require_field(data, "zone_entropy_floor", source),
+        zone_entropy_ema_alpha=_require_field(data, "zone_entropy_ema_alpha", source),
+        zone_entropy_kp=_require_field(data, "zone_entropy_kp", source),
+        zone_entropy_kd=_require_field(data, "zone_entropy_kd", source),
+        zone_entropy_bonus_step_max=_require_field(data, "zone_entropy_bonus_step_max", source),
+        zone_entropy_bonus_cap=_require_field(data, "zone_entropy_bonus_cap", source),
         zone_buffs=zone_buffs,
     )
 

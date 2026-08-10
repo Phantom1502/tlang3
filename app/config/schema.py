@@ -131,6 +131,12 @@ class RoundConfig:
     kp: float
     kd: float
     step_max: int
+    zone_entropy_floor: float
+    zone_entropy_ema_alpha: float
+    zone_entropy_kp: float
+    zone_entropy_kd: float
+    zone_entropy_bonus_step_max: float
+    zone_entropy_bonus_cap: float
     zone_buffs: Dict[str, ZoneBuffConfig]
 
 

@@ -75,7 +75,8 @@ def main(cfg: AppConfig):
     from app.training.reward import (
         TLangReward, 
         StatsCollector, 
-        EMABuffController, 
+        ZoneEntropyController, 
+        DEFAULT_ZONE_ENTROPY_FILENAME,
         StatsPersistCallback,
         stats_path_for_rank
     )
@@ -132,7 +133,7 @@ def main(cfg: AppConfig):
     stats_collector = StatsCollector.load(stats_path)
     logger.info(f"[rank={rank}] StatsCollector: nạp lại {len(stats_collector._records)} record cũ.")
     
-    buff_controller: EMABuffController = EMABuffController.load_or_init(round_config, resume_checkpoint)
+    entropy_controller: ZoneEntropyController = ZoneEntropyController.load_or_init(round_config, resume_checkpoint)
     
     # ------------------------------------------------------------
     # Dataset — load raw GRPO gốc rồi nhân đôi theo task_id (xem cảnh báo
@@ -225,7 +226,7 @@ def main(cfg: AppConfig):
     )
     
     stats_persist_callback = StatsPersistCallback(
-        buff_controller,
+        entropy_controller,
         stats_collector, 
         round_config, 
         args.output_dir
@@ -233,7 +234,7 @@ def main(cfg: AppConfig):
     
     tlang_reward = TLangReward(
         cfg,
-        buff_controller=buff_controller,
+        entropy_controller=entropy_controller,
         stats_collector=stats_collector,
     )
     
@@ -251,7 +252,7 @@ def main(cfg: AppConfig):
     trainer.save_model()
     canonical_tok = load_tokenizer(repo_id=args.repo_id, allow_local_fallback=False)
     canonical_tok.save_pretrained(args.output_dir)
-    buff_controller.save(os.path.join(args.output_dir, "zone_buff_state.json"))
+    entropy_controller.save(os.path.join(args.output_dir, DEFAULT_ZONE_ENTROPY_FILENAME))
     stats_collector.save(stats_path)
 
     if push_to_hub:
