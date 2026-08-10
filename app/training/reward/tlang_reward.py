@@ -181,7 +181,6 @@ class TLangReward:
         self.cfg = cfg
         self.buff_controller = buff_controller
         self.stats_collector = stats_collector
-        self.debug_log_path = "log.json"
 
     def common_check(
         self,
@@ -249,11 +248,6 @@ class TLangReward:
         return ZoneTaskScore(zone_quality=zone_quality, probe=probe, has_zone=True, is_touched=True)
 
     def compute_reward(self, prompt: Any, completion: str, future_bins: Sequence[Sequence[int]]) -> float:
-        if self.debug_log_path:
-            import json
-            with open(self.debug_log_path, "a", encoding="utf-8") as f:
-                f.write(json.dumps({"prompt": prompt[:80], "completion": completion}) + "\n")
-            
         reward = 0.0
 
         parse_result: ParseResult = Parser.from_text(self.cfg, prompt + " " + completion).parse()
