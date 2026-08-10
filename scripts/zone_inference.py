@@ -169,6 +169,7 @@ class ZoneInference:
     # future_bins), 1 hàm check price-in-zone (KHÔNG dùng future_bins).
     # ------------------------------------------------------------------
     def _score(self, prompt: str, completion: str, future_bins: Sequence[Sequence[int]]):
+        print(f"=== {prompt} === {completion} ===")
         """Trả (ScoreResult, program|None). program=None nếu chưa pass gate
         — caller (_check_price_in_zone) cần program để lấy chart+zone."""
         parse_result = Parser.from_text(self.cfg, prompt + " " + completion).parse()
