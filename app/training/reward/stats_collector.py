@@ -109,13 +109,11 @@ class StatsCollector:
             total = by_trend_total[trend]
             for zone_type, entry in zone_types.items():
                 zqs = entry["zone_qualities"]
-                buffs = entry["buffs"]
                 touched = entry["touched"]
                 result[trend][zone_type] = {
                     "count": entry["count"],
                     "freq_within_trend": entry["count"] / total if total else 0.0,
                     "avg_zone_quality": (sum(zqs) / len(zqs)) if zqs else None,
-                    "avg_buff": (sum(buffs) / len(buffs)) if buffs else None,
                     "touch_rate": (sum(touched) / len(touched)) if touched else None,
                 }
         return result
