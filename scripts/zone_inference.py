@@ -226,6 +226,9 @@ class ZoneInference:
     # Entry point.
     # ------------------------------------------------------------------
     def run(self) -> None:
+        from collections import Counter
+        zone_types_counter = Counter()
+        
         n = len(self.dataset)
         if self.next_index >= n:
             print(f"Đã xử lý hết {n} dòng từ lần chạy trước — không còn gì để làm.")
@@ -261,6 +264,11 @@ class ZoneInference:
                     "price_in_zone_now": price_in_zone_now,
                 })
 
+                if score.zone_type is not None:
+                    zone_types_counter[score.zone_type] += 1
+
+            # debug zone counter
+            print(f"Zone type counter: {zone_types_counter}")
             self.next_index = end
             print(f"  ... {self.next_index}/{n}")
 
