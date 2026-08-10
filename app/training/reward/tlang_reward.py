@@ -297,7 +297,6 @@ class TLangReward:
 
         rewards: List[float] = [0.0] * n
         metas: List[Optional[TaskRolloutMeta]] = [None] * n
-        rewards = []
         
         for i in range(n):
             reward, meta = self.compute_reward(
