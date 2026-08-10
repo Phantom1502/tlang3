@@ -3,7 +3,7 @@ alpha: 0.15
 kp: 0.001
 kd: 0.001
 step_max: 0.001
-zone_entropy_floor: 0.60
+zone_entropy_floor: 0.50
 zone_entropy_ema_alpha: 0.9
 zone_entropy_kp: 0.05
 zone_entropy_kd: 0.01
