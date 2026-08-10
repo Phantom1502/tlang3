@@ -37,7 +37,7 @@ class StatsPersistCallback(TrainerCallback):
         snap = self.entropy_controller.snapshot()
         if snap:
             print(
-                f"\n=== ZONE ENTROPY CONTROLLER === "
+                f"\n=== ZONE ENTROPY CONTROLLER === \n"
                 f"ema_entropy={snap['ema_entropy']:.4f}, bonus={snap['bonus']:.4f}, prev_error={snap['prev_error']:.4f}"
             )
 
