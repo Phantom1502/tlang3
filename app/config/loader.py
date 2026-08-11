@@ -22,7 +22,7 @@ from app.config.schema import (
     ModelsConfig,
     TrainingConfig,
     RoundConfig,
-    ZoneBuffConfig,
+    ZoneEntropyConfig,
     GroupBuffState,
 )
 
@@ -134,15 +134,17 @@ def _build_training_config(data: Dict[str, Any], source: str) -> TrainingConfig:
     return train_cfgs
 
 def _build_round_config(data: Dict[str, Any], source: str) -> RoundConfig:
-    zone_buffs_raw = _require_field(data, "zone_buffs", source)
-    zone_buffs = {}
-    for zone_type, buff_data in zone_buffs_raw.items():
-        buff_source = f"{source}.zone_buffs.{zone_type}"
-        zone_buffs[zone_type] = ZoneBuffConfig(
-            buff_min=_require_field(buff_data, "buff_min", buff_source),
-            buff_max=_require_field(buff_data, "buff_max", buff_source),
-            buff_init=_require_field(buff_data, "buff_init", buff_source),
-            target_ratio=_require_field(buff_data, "target_ratio", buff_source),
+    entropys_raw = _require_field(data, "entropys", source)
+    entropys = {}
+    for entropy_type, entropy_data in entropys_raw.items():
+        buff_source = f"{source}.entropys.{entropy_type}"
+        entropys[entropy_type] = ZoneEntropyConfig(
+            floor=_require_field(entropy_data, "floor", buff_source),
+            ema_alpha=_require_field(entropy_data, "ema_alpha", buff_source),
+            kp=_require_field(entropy_data, "kp", buff_source),
+            kd=_require_field(entropy_data, "kd", buff_source),
+            bonus_step_max=_require_field(entropy_data, "bonus_step_max", buff_source),
+            bonus_cap=_require_field(entropy_data, "bonus_cap", buff_source),
         )
     return RoundConfig(
         round_id=_require_field(data, "round_id", source),
@@ -150,13 +152,7 @@ def _build_round_config(data: Dict[str, Any], source: str) -> RoundConfig:
         kp=_require_field(data, "kp", source),
         kd=_require_field(data, "kd", source),
         step_max=_require_field(data, "step_max", source),
-        zone_entropy_floor=_require_field(data, "zone_entropy_floor", source),
-        zone_entropy_ema_alpha=_require_field(data, "zone_entropy_ema_alpha", source),
-        zone_entropy_kp=_require_field(data, "zone_entropy_kp", source),
-        zone_entropy_kd=_require_field(data, "zone_entropy_kd", source),
-        zone_entropy_bonus_step_max=_require_field(data, "zone_entropy_bonus_step_max", source),
-        zone_entropy_bonus_cap=_require_field(data, "zone_entropy_bonus_cap", source),
-        zone_buffs=zone_buffs,
+        entropys=entropys,
     )
 
 

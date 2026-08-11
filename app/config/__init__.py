@@ -8,7 +8,7 @@ from .schema import (
     ModelsConfig,
     TrainingConfig,
     RoundConfig,
-    ZoneBuffConfig,
+    ZoneEntropyConfig,
     GroupBuffState
 )
 
@@ -29,7 +29,7 @@ __all__ = [
     "ModelsConfig",
     "TrainingConfig",
     "RoundConfig",
-    "ZoneBuffConfig",
+    "ZoneEntropyConfig",
     "GroupBuffState",
     "load_config",
     "get_scale",

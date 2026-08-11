@@ -24,6 +24,8 @@ class TaskRolloutMeta:
     semantic_passed: bool
     zone_type: Optional[str]          # "NO_ZONE" / "SUP_ZONE" / "RES_ZONE" — None nếu chưa pass gate
     zone_quality: Optional[float]     # = zone_task.zone_quality (đã nhân zone_score_weight), None nếu chưa pass gate
+    zone_upper: Optional[int]
+    zone_lower: Optional[int]
     is_touched: Optional[bool] = None  # True/False nếu zone_type in (SUP_ZONE,RES_ZONE); None nếu NO_ZONE hoặc chưa pass gate
 
 
@@ -190,6 +192,8 @@ class StatsCollector:
             data = json.loads(p.read_text(encoding="utf-8"))
             for d in data.get("records", []):
                 d.setdefault("is_touched", None)   # tương thích ngược file stats cũ chưa có field này
+                d.setdefault("zone_upper", None)
+                d.setdefault("zone_lower", None)
                 collector.log(TaskRolloutMeta(**d))
         return collector
 
@@ -203,5 +207,7 @@ class StatsCollector:
             data = json.loads(p.read_text(encoding="utf-8"))
             for d in data.get("records", []):
                 d.setdefault("is_touched", None)   # tương thích ngược file stats cũ chưa có field này
+                d.setdefault("zone_upper", None)
+                d.setdefault("zone_lower", None)
                 collector.log(TaskRolloutMeta(**d))
         return collector

@@ -172,17 +172,14 @@ class TLangReward:
     def __init__(
         self,
         cfg: AppConfig,
-        round_config: Optional[RoundConfig] = None,   # KHÔNG còn dùng trong class này — zone_score_weight
-                                                         # đã chuyển vào cfg.base.zone_score_weight. Giữ tham
-                                                         # số này lại (không xoá) để không phá vỡ chữ ký hàm
-                                                         # ở các call site đã có (train_grpo.py, ZoneEval) —
-                                                         # xoá thật sự CẦN sửa đồng thời mọi nơi gọi.
         entropy_controller: Optional[ZoneEntropyController] = None,
+        entropy_position_controller: Optional[ZoneEntropyController] = None,
         stats_collector: Optional[StatsCollector] = None,
     ):
         self.__name__ = "TLangReward"
         self.cfg = cfg
         self.entropy_controller = entropy_controller
+        self.entropy_position_controller = entropy_position_controller
         self.stats_collector = stats_collector
 
     def common_check(
@@ -273,6 +270,8 @@ class TLangReward:
                 semantic_passed=False,
                 zone_type=None,
                 zone_quality=None,
+                zone_upper=None,
+                zone_lower=None,
                 is_touched=None,
             )
             if self.stats_collector is not None:
@@ -288,6 +287,8 @@ class TLangReward:
             semantic_passed=True,
             zone_type=program.think.zone_type,
             zone_quality=zone_score.zone_quality,
+            zone_upper=program.think.upper,
+            zone_lower=program.think.lower,
             is_touched=zone_score.is_touched,
         )
         if self.stats_collector is not None:
@@ -337,6 +338,23 @@ class TLangReward:
                 branch_key = f"{metas[i].trend}|{metas[i].zone_type}"
                 surprisal = -math.log(probs[branch_key])
                 rewards[i] += strength * surprisal
+                
+        pos_strength = self.entropy_position_controller.get_bonus()
+        for idx_list in groups_idx.values():
+            if len(idx_list) < MIN_SAMPLES_PER_GROUP_FOR_ENTROPY:
+                continue
+
+            pos_branch_list = [f"{metas[i].zone_upper}|{metas[i].zone_lower}" for i in idx_list]
+            h, probs = _entropy_and_probs_str(pos_branch_list)
+            self.entropy_position_controller.record_entropy(h)
+
+            if pos_strength <= 0.0:
+                continue
+
+            for i in idx_list:
+                pos_branch_key = f"{metas[i].zone_upper}|{metas[i].zone_lower}"
+                surprisal = -math.log(probs[pos_branch_key])
+                rewards[i] += pos_strength * surprisal
                 
         return rewards
     

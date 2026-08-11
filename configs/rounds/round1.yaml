@@ -3,25 +3,18 @@ alpha: 0.15
 kp: 0.001
 kd: 0.001
 step_max: 0.001
-zone_entropy_floor: 0.50
-zone_entropy_ema_alpha: 0.7
-zone_entropy_kp: 0.05
-zone_entropy_kd: 0.01
-zone_entropy_bonus_step_max: 0.01
-zone_entropy_bonus_cap: 0.4
-zone_buffs:
-  NO_ZONE:
-    buff_min: 0.15
-    buff_max: 0.15
-    buff_init: 0.15
-    target_ratio: 0.1
-  SUP_ZONE:
-    buff_min: 0.00
-    buff_max: 0.06
-    buff_init: 0.00
-    target_ratio: 0.3
-  RES_ZONE:
-    buff_min: 0.00
-    buff_max: 0.06
-    buff_init: 0.00
-    target_ratio: 0.3
+entropys:
+  zone_entropy:
+    floor: 0.50
+    ema_alpha: 0.7
+    kp: 0.05
+    kd: 0.01
+    bonus_step_max: 0.01
+    bonus_cap: 0.4
+  zone_position_entropy:
+    floor: 0.5
+    ema_alpha: 0.7
+    kp: 0.05
+    kd: 0.01
+    bonus_step_max: 0.01
+    bonus_cap: 0.1

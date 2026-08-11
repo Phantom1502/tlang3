@@ -8,9 +8,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence
 
-from app.config.schema import RoundConfig
+from app.config import ZoneEntropyConfig
 
 DEFAULT_ZONE_ENTROPY_FILENAME = "zone_entropy_state.json"
+DEFAULT_ZONE_POSITION_ENTROPY_FILENAME = "zone_position_entropy_state.json"
 MIN_SAMPLES_PER_GROUP_FOR_ENTROPY = 2
 
 def _clip(x: float, lo: float, hi: float) -> float:
@@ -54,9 +55,9 @@ class ZoneEntropyController:
         self.state: Optional[ZoneEntropyState] = None
         self._readings: List[float] = []
 
-    def seed_from_round_config(self, round_config: RoundConfig) -> None:
+    def seed_from_round_config(self, entropy_config: ZoneEntropyConfig) -> None:
         self.state = ZoneEntropyState(
-            ema_entropy=round_config.zone_entropy_floor,
+            ema_entropy=entropy_config.floor,
             bonus=0.0,
             prev_error=0.0,
         )
@@ -67,7 +68,7 @@ class ZoneEntropyController:
         luỹ, CHƯA update ngay. on_step_end() mới thật sự update PD."""
         self._readings.append(h)
 
-    def on_step_end(self, round_config: RoundConfig) -> None:
+    def on_step_end(self, entropy_config: ZoneEntropyConfig) -> None:        
         if self.state is None or not self._readings:
             self._readings.clear()
             return
@@ -76,21 +77,21 @@ class ZoneEntropyController:
         st = self.state
 
         st.ema_entropy = (
-            (1.0 - round_config.zone_entropy_ema_alpha) * mean_h
-            + round_config.zone_entropy_ema_alpha * st.ema_entropy
+            (1.0 - entropy_config.ema_alpha) * mean_h
+            + entropy_config.ema_alpha * st.ema_entropy
         )
 
-        error = max(0.0, round_config.zone_entropy_floor - st.ema_entropy)
+        error = max(0.0, entropy_config.floor - st.ema_entropy)
         d_error = error - st.prev_error
         st.prev_error = error
 
         if error > 0.0:
-            delta = round_config.zone_entropy_kp * error + round_config.zone_entropy_kd * d_error
-            delta = _clip(delta, -round_config.zone_entropy_bonus_step_max, round_config.zone_entropy_bonus_step_max)
-            st.bonus = _clip(st.bonus + delta, 0.0, round_config.zone_entropy_bonus_cap)
+            delta = entropy_config.kp * error + entropy_config.kd * d_error
+            delta = _clip(delta, -entropy_config.bonus_step_max, entropy_config.bonus_step_max)
+            st.bonus = _clip(st.bonus + delta, 0.0, entropy_config.bonus_cap)
         else:
             # entropy đã ở/trên floor -> chủ động kéo bonus về 0 dần
-            decay = min(st.bonus, round_config.zone_entropy_bonus_step_max)
+            decay = min(st.bonus, entropy_config.bonus_step_max)
             st.bonus = max(0.0, st.bonus - decay)
 
         self._readings.clear()
@@ -129,10 +130,15 @@ class ZoneEntropyController:
             return False
 
     @classmethod
-    def load_or_init(cls, round_config: RoundConfig, resume_checkpoint: Optional[str] = None) -> "ZoneEntropyController":
+    def load_or_init(
+        cls, 
+        entropy_config: ZoneEntropyConfig, 
+        file_name: str = DEFAULT_ZONE_ENTROPY_FILENAME,
+        resume_checkpoint: Optional[str] = None
+    ) -> "ZoneEntropyController":
         controller = cls()
-        state_path = os.path.join(resume_checkpoint, DEFAULT_ZONE_ENTROPY_FILENAME) if resume_checkpoint else None
+        state_path = os.path.join(resume_checkpoint, file_name) if resume_checkpoint else None
         loaded = bool(state_path and Path(state_path).exists() and controller.load(state_path))
         if not loaded:
-            controller.seed_from_round_config(round_config)
+            controller.seed_from_round_config(entropy_config)
         return controller

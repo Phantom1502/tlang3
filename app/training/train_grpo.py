@@ -77,6 +77,7 @@ def main(cfg: AppConfig):
         StatsCollector, 
         ZoneEntropyController, 
         DEFAULT_ZONE_ENTROPY_FILENAME,
+        DEFAULT_ZONE_POSITION_ENTROPY_FILENAME,
         StatsPersistCallback,
         stats_path_for_rank
     )
@@ -133,7 +134,17 @@ def main(cfg: AppConfig):
     stats_collector = StatsCollector.load(stats_path)
     logger.info(f"[rank={rank}] StatsCollector: nạp lại {len(stats_collector._records)} record cũ.")
     
-    entropy_controller: ZoneEntropyController = ZoneEntropyController.load_or_init(round_config, resume_checkpoint)
+    entropy_controller: ZoneEntropyController = ZoneEntropyController.load_or_init(
+        entropy_config=round_config['zone_entropy'], 
+        file_name=DEFAULT_ZONE_ENTROPY_FILENAME,
+        resume_checkpoint=resume_checkpoint
+    )
+    
+    entropy_position_controller: ZoneEntropyController = ZoneEntropyController.load_or_init(
+        entropy_config=round_config['zone_position_entropy'], 
+        file_name=DEFAULT_ZONE_POSITION_ENTROPY_FILENAME,
+        resume_checkpoint=resume_checkpoint
+    )
     
     # ------------------------------------------------------------
     # Dataset — load raw GRPO gốc rồi nhân đôi theo task_id (xem cảnh báo
@@ -227,6 +238,7 @@ def main(cfg: AppConfig):
     
     stats_persist_callback = StatsPersistCallback(
         entropy_controller,
+        entropy_position_controller,
         stats_collector, 
         round_config, 
         args.output_dir
@@ -235,6 +247,7 @@ def main(cfg: AppConfig):
     tlang_reward = TLangReward(
         cfg,
         entropy_controller=entropy_controller,
+        entropy_position_controller=entropy_position_controller,
         stats_collector=stats_collector,
     )
     
@@ -253,6 +266,7 @@ def main(cfg: AppConfig):
     canonical_tok = load_tokenizer(repo_id=args.repo_id, allow_local_fallback=False)
     canonical_tok.save_pretrained(args.output_dir)
     entropy_controller.save(os.path.join(args.output_dir, DEFAULT_ZONE_ENTROPY_FILENAME))
+    entropy_position_controller.save(os.path.join(args.output_dir, DEFAULT_ZONE_POSITION_ENTROPY_FILENAME))
     stats_collector.save(stats_path)
 
     if push_to_hub:
