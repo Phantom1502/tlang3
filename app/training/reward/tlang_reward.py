@@ -287,8 +287,8 @@ class TLangReward:
             semantic_passed=True,
             zone_type=program.think.zone_type,
             zone_quality=zone_score.zone_quality,
-            zone_upper=program.think.upper,
-            zone_lower=program.think.lower,
+            zone_upper=program.think.zone_upper,
+            zone_lower=program.think.zone_lower,
             is_touched=zone_score.is_touched,
         )
         if self.stats_collector is not None:
