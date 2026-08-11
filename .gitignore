@@ -11,3 +11,4 @@ app/training/data/__pycache__/
 data/pretrain/
 app/training/__pycache__/
 app/training/reward/__pycache__/
+app/__pycache__/

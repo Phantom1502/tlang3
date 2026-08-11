@@ -33,7 +33,7 @@ import pyarrow.parquet as pq
 from datasets import load_dataset
 
 from app.config import AppConfig
-from app.data_prepare import Candle
+from app.candle import Candle
 
 from app.lang import (
     ZoneNode,
@@ -266,7 +266,7 @@ class ZoneInference:
                 })
 
                 if score.zone_type is not None:
-                    zone_types_counter[score.zone_type] += 1
+                    zone_types_counter[f"{program.think.trend}_{score.zone_type}"] += 1
 
             # debug zone counter
             print(f"Zone type counter: {zone_types_counter}")

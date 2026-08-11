@@ -97,7 +97,6 @@ if __name__ == "__main__":
     from app.lang.parser import Parser
     from app.config.schema import AppConfig
     from app.config.loader import load_config
-    from app.data_prepare.candle import Candle
     cfg: AppConfig = load_config("configs")
 
     candle1: CandleNode = CandleNode(open=1, high=2, low=3, close=4)

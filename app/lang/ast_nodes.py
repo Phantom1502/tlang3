@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import List, Optional
-from app.data_prepare.candle import Candle
+from app.candle import Candle
 
 CandleNode = Candle
 

@@ -4,7 +4,7 @@ import random
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
-from app.data_prepare.candle import Candle
+from app.candle import Candle
 from app.lang import (
     ASTVisitor,
     ThinkNode,

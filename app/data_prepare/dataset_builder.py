@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 from typing import List, Optional, Tuple
 
-from .candle import Candle, augment_shift
+from app.candle import Candle, augment_shift
 from app.config import (
     AppConfig,
     BaseConfig,

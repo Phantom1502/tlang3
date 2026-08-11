@@ -12,7 +12,7 @@ neu ai vo tinh regress lai 2 bug nay, test se FAIL ngay.
 Chay: python -m tests.test_data_prepare
 """
 from app.config.schema import AppConfig, BaseConfig, DataGenV2Config, ModelsConfig, WindowConfig
-from app.data_prepare.candle import Candle
+from app.candle import Candle
 from app.data_prepare.dataset_builder import DatasetBuilder, augment_shift
 from app.data_prepare.generator import LEAF_RECIPES, ZoneGenerator
 from app.lang.parser import Parser

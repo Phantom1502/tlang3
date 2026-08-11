@@ -8,7 +8,7 @@ from enum import Enum
 from collections import defaultdict, Counter
 
 from app.config.schema import AppConfig, RoundConfig
-from app.data_prepare.candle import Candle
+from app.candle import Candle
 from app.lang.ast_nodes import ProgramNode, ZoneNode
 from app.lang.parser import Parser, ParseResult
 from app.lang.semantic import SemanticChecker, SemanticResult

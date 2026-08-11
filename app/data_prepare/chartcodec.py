@@ -2,7 +2,7 @@ import re
 import numpy as np
 import pandas as pd
 from typing import List
-from .candle import Candle
+from app.candle import Candle
 
 _TOKEN_RE = re.compile(r"([OHLC])_(\d+)")
 
