@@ -36,8 +36,8 @@ class StatsPersistCallback(TrainerCallback):
     def on_step_end(self, args, state, control, **kwargs):
         # KHÔNG còn đếm counts từ stats_collector — entropy đã được record_entropy()
         # trực tiếp trong TLangReward.__call__() (per rollout group), ở đây chỉ flush.
-        self.entropy_controller.on_step_end(entropy_config=self.round_config['zone_entropy'])
-        self.entropy_position_controller.on_step_end(entropy_config=self.round_config['zone_position_entropy'])
+        self.entropy_controller.on_step_end(entropy_config=self.round_config.entropys['zone_entropy'])
+        self.entropy_position_controller.on_step_end(entropy_config=self.round_config.entropys['zone_position_entropy'])
         self.stats_collector.mark_step_boundary()   # vẫn giữ để report theo nhịp save_steps không lẫn dữ liệu
 
     def on_log(self, args, state, control, **kwargs):

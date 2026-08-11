@@ -135,13 +135,13 @@ def main(cfg: AppConfig):
     logger.info(f"[rank={rank}] StatsCollector: nạp lại {len(stats_collector._records)} record cũ.")
     
     entropy_controller: ZoneEntropyController = ZoneEntropyController.load_or_init(
-        entropy_config=round_config['zone_entropy'], 
+        entropy_config=round_config.entropys['zone_entropy'], 
         file_name=DEFAULT_ZONE_ENTROPY_FILENAME,
         resume_checkpoint=resume_checkpoint
     )
     
     entropy_position_controller: ZoneEntropyController = ZoneEntropyController.load_or_init(
-        entropy_config=round_config['zone_position_entropy'], 
+        entropy_config=round_config.entropys['zone_position_entropy'], 
         file_name=DEFAULT_ZONE_POSITION_ENTROPY_FILENAME,
         resume_checkpoint=resume_checkpoint
     )
