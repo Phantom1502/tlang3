@@ -230,7 +230,12 @@ class TLangReward:
         đảm bảo điều này, hàm này không tự check lại passed)."""
         think = program.think
         if think.zone is None:
-            return ZoneTaskScore(zone_quality=0.0, probe=None, has_zone=False, is_touched=None)
+            return ZoneTaskScore(
+                zone_quality=self.cfg.base.no_zone_reward * self.cfg.base.zone_score_weight, 
+                probe=None, 
+                has_zone=False, 
+                is_touched=None
+            )
 
         future_candles: List[Candle] = [Candle(*b) for b in future_bins]
         probe: ForwardTestResult = probe_zone_quality(
@@ -272,9 +277,6 @@ class TLangReward:
 
         zone_score: ZoneTaskScore = self.zone_score(program, future_bins)
         reward = reward + zone_score.zone_quality
-        
-        if program.think.zone_type == "NO_ZONE":
-            reward += self.cfg.base.no_zone_reward * self.cfg.base.zone_score_weight
 
         meta = TaskRolloutMeta(
             trend=program.think.trend if program.think else None,
