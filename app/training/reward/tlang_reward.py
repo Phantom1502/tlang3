@@ -251,9 +251,13 @@ class TLangReward:
             # thấy tỉ lệ not-touched tăng bất thường qua các round, quay
             # lại bàn thêm penalty RIÊNG BIỆT, KHÔNG lẫn vào zone_quality.
             return ZoneTaskScore(zone_quality=0.0, probe=probe, has_zone=True, is_touched=False)
-
-        zone_quality = probe.r_multiple * self.cfg.base.zone_score_weight
-        return ZoneTaskScore(zone_quality=zone_quality, probe=probe, has_zone=True, is_touched=True)
+        
+        return ZoneTaskScore(
+            zone_quality=probe.r_multiple * self.cfg.base.zone_score_weight, 
+            probe=probe, 
+            has_zone=True, 
+            is_touched=True
+        )
 
     def compute_reward(self, prompt: Any, completion: str, future_bins: Sequence[Sequence[int]]) -> Tuple[float, TaskRolloutMeta]:
         reward = 0.0
