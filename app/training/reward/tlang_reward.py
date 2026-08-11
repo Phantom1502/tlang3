@@ -272,6 +272,9 @@ class TLangReward:
 
         zone_score: ZoneTaskScore = self.zone_score(program, future_bins)
         reward = reward + zone_score.zone_quality
+        
+        if program.think.zone_type == "NO_ZONE":
+            reward += self.cfg.base.no_zone_reward * self.cfg.base.zone_score_weight
 
         meta = TaskRolloutMeta(
             trend=program.think.trend if program.think else None,

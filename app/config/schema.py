@@ -25,6 +25,7 @@ class BaseConfig:
     zone_width_min_bins: int
     zone_width_max_bins: int
     zone_score_weight: float
+    no_zone_reward: float
     zone_last_n_touch: int
     digit_pad: int
     rr_min: int
