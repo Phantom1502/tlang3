@@ -12,3 +12,4 @@ data/pretrain/
 app/training/__pycache__/
 app/training/reward/__pycache__/
 app/__pycache__/
+data/re_aug_grpo/
