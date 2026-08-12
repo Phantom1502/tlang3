@@ -337,7 +337,9 @@ class TLangReward:
             for i in idx_list:
                 branch_key = f"{metas[i].trend}|{metas[i].zone_type}"
                 surprisal = -math.log(probs[branch_key])
-                rewards[i] += strength * surprisal
+                max_suprisal = -math.log(1.0 / n)  # surprisal trần khi p=1/16 (hiếm nhất có thể trong group 16)
+                normalized_surprisal = surprisal / max_suprisal
+                rewards[i] += strength * normalized_surprisal
                 
         pos_strength = self.entropy_position_controller.get_bonus()
         for idx_list in groups_idx.values():
@@ -354,7 +356,9 @@ class TLangReward:
             for i in idx_list:
                 pos_branch_key = f"{metas[i].zone_upper}|{metas[i].zone_lower}"
                 surprisal = -math.log(probs[pos_branch_key])
-                rewards[i] += pos_strength * surprisal
+                max_suprisal = -math.log(1.0 / n)
+                normalized_surprisal = surprisal / max_suprisal
+                rewards[i] += pos_strength * normalized_surprisal
                 
         return rewards
     
