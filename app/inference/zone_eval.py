@@ -154,7 +154,7 @@ class ZoneEval:
         # cần truyền nữa — zone_score_weight đã chuyển hẳn vào
         # cfg.base.zone_score_weight (xem tlang_reward.py). ---
         self.stats_collector = StatsCollector()
-        self.reward_fn = TLangReward(cfg, buff_controller=None, stats_collector=self.stats_collector)
+        self.reward_fn = TLangReward(cfg, entropy_controller=None, entropy_position_controller=None, stats_collector=self.stats_collector)
 
         # Lưu song song reward TRẢ VỀ THẬT của compute_reward() theo đúng thứ tự
         # log — KHÔNG suy ngược từ hằng số gate_score=2.0 (giả định nội bộ của
