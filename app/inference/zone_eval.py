@@ -169,7 +169,7 @@ class ZoneEval:
             completions = self.model.generate_batch(rows)
 
             for row, completion in zip(rows, completions):
-                reward = self.reward_fn.compute_reward(row["prompt"], completion, row["future_bins"])
+                reward, _ = self.reward_fn.compute_reward(row["prompt"], completion, row["future_bins"])
                 self._rewards.append(reward)
 
             print(f"  ... {end}/{n}")
