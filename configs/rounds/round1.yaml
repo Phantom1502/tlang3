@@ -17,4 +17,4 @@ entropys:
     kp: 0.05
     kd: 0.01
     bonus_step_max: 0.01
-    bonus_cap: 0.17
+    bonus_cap: 0.16
