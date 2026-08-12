@@ -4,3 +4,10 @@ total = 16
 probs = [4/total] + [4/total] + [3/total] + [3/total] + [1/total]
 h = -sum(p*math.log(p) for p in probs)
 print(h)  # ≈ 2.322
+
+max_suprisal = -math.log(1.0 / 16)
+print(max_suprisal)
+
+for p in probs:
+    surprisal = -math.log(p) / max_suprisal
+    print(f"{p} -> {surprisal}")
