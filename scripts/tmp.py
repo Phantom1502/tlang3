@@ -1,7 +1,7 @@
 import math
 # 1 cụm 5 sample trùng nhau (p=5/16), 11 sample còn lại mỗi cái unique (p=1/16 mỗi cái)
 total = 25600 
-probs = [7614/total] + [1726/total] + [6940/total] + [758/total] + [8190/total]
+probs = [6380/total] + [8433/total] + [5647/total] + [2936/total] + [1468/total]
 h = -sum(p*math.log(p) for p in probs)
 print(h)  # ≈ 2.322
 
