@@ -319,7 +319,7 @@ class TLangReward:
         
         groups_idx: Dict[Any, List[int]] = defaultdict(list)
         for i, prompt in enumerate(prompts):
-            if metas[i].trend is not None and metas[i].zone_type is not None:
+            if metas[i].well_formed and metas[i].semantic_passed:
                 groups_idx[prompt].append(i)
 
         strength = self.entropy_controller.get_bonus()
