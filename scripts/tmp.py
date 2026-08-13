@@ -12,3 +12,15 @@ print(max_suprisal)
 for p in probs:
     surprisal = -math.log(p) / max_suprisal
     print(f"{p} -> {surprisal}")
+    
+
+import pandas as pd
+
+file = r"data\pretrain\zone_sft_re_val_raw.parquet"
+
+df = pd.read_parquet(file)
+
+print(df.iloc[1]['prompt'])
+print(df.iloc[1]['future_bins'])
+print(df.iloc[1]['symbol'])
+print(df.iloc[1]['window_id'])

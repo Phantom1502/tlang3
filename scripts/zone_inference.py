@@ -244,7 +244,7 @@ class ZoneInference:
             completions = self.model.generate_batch(rows)
 
             for row, completion in zip(rows, completions):
-                print(f"=== {row["prompt"]} === {completion} ===")
+                #print(f"=== {row["prompt"]} === {completion} ===")
                 score, program = self._score(row["prompt"], completion, row["future_bins"])
 
                 price_in_zone_now = False
