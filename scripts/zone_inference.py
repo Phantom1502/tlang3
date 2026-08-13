@@ -100,8 +100,8 @@ class ZoneInference:
         batch_size: int = 16,
         max_new_tokens: int = 64,
         do_sample: bool = True,
-        temperature: float = 0.8,
-        top_p: float = 0.95,
+        temperature: float = 1.25,
+        top_p: float = 1.0,
         shard_size: int = 2000,
     ):
         self.cfg = cfg
@@ -134,6 +134,8 @@ class ZoneInference:
             ("well_formed", pa.bool_()),
             ("semantic_passed", pa.bool_()),
             ("zone_type", pa.string()),
+            ("zone_lower_bin", pa.int16()),
+            ("zone_upper_bin", pa.int16()),
             ("zone_quality", pa.float32()),
             ("zone_touched", pa.bool_()),
             ("price_in_zone_now", pa.bool_()),
@@ -250,6 +252,12 @@ class ZoneInference:
                 price_in_zone_now = False
                 if program is not None and program.think.zone is not None:
                     price_in_zone_now = self._check_price_in_zone(program)
+                    
+                zone_upper = None
+                zone_lower = None
+                if program is not None and program.think.zone is not None:
+                    zone_upper = program.think.zone.upper_bin
+                    zone_lower = program.think.zone.lower_bin
 
                 batch_records.append({
                     "prompt": row["prompt"],
@@ -260,6 +268,8 @@ class ZoneInference:
                     "well_formed": score.well_formed,
                     "semantic_passed": score.semantic_passed,
                     "zone_type": score.zone_type,
+                    "zone_lower_bin": zone_lower,
+                    "zone_upper_bin": zone_upper,
                     "zone_quality": score.zone_quality,
                     "zone_touched": score.zone_touched,
                     "price_in_zone_now": price_in_zone_now,
