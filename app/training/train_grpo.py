@@ -260,6 +260,22 @@ def main(cfg: AppConfig):
         callbacks=[stats_persist_callback],
     )
     
+    if training_args.beta != 0.0:
+        if not args.source_repo:
+            raise RuntimeError(
+                "beta != 0 nhưng thiếu --source_repo — không có nguồn cố định để pin ref_model. "
+                "Round GRPO luôn cần source_repo (SFT hoặc round trước) làm neo KL cho CẢ round, "
+                "kể cả khi model chính đang resume từ checkpoint khác."
+            )
+        logger.info(f"Pin ref_model vào nguồn init cố định của round: {args.source_repo} (KHÔNG đổi theo resume)")
+        ref_model_loader = ModelLoader(cfg.models, args.model_size)
+        ref_model = ref_model_loader.load_ref_model(args.source_repo)
+        ref_model.eval()
+        for p in ref_model.parameters():
+            p.requires_grad = False
+        ref_model.to(model.device)
+        trainer.ref_model = ref_model
+    
     trainer.train(resume_from_checkpoint=resume_checkpoint)
     
     trainer.save_model()
