@@ -10,11 +10,11 @@ entropys:
     kp: 0.05
     kd: 0.01
     bonus_step_max: 0.01
-    bonus_cap: 0.17
+    bonus_cap: 0.16
   zone_position_entropy:
     floor: 2.5
     ema_alpha: 0.7
     kp: 0.05
     kd: 0.01
     bonus_step_max: 0.01
-    bonus_cap: 0.14
+    bonus_cap: 0.13
