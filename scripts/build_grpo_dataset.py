@@ -49,8 +49,13 @@ class ZoneGRPOOneFileGen:
                 continue
                 
             # Cắt cửa sổ (pandas slice still takes a little time, but acceptable)
-            window = self.df.iloc[i : i + self.cfg.window.window_size]
-            candles, anchor_open = self.codec.encode_window(window, anchor_atr)
+            input_window = self.df.iloc[i : i + self.cfg.window.input_candles]
+            input_candles, anchor_open = self.codec.encode_window(input_window, anchor_atr)
+            
+            futures_window = self.df.iloc[i + self.cfg.window.input_candles : i + self.cfg.window.window_size]
+            futures_candles = self.codec.encode_window_with_anchor(futures_window, anchor_open,anchor_atr)
+            
+            candles = input_candles + futures_candles
             
             rows = self.builder.build_grpo_rows(
                 candles, 

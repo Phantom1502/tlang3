@@ -12,3 +12,16 @@ print(max_suprisal)
 for p in probs:
     surprisal = -math.log(p) / max_suprisal
     print(f"{p} -> {surprisal}")
+    
+total = 16 
+probs = [2/total] * 6 + [1/total] * 4
+#probs = [1/5] * 5
+h = -sum(p*math.log(p) for p in probs)
+print(h)  # ≈ 2.322
+
+max_suprisal = -math.log(1.0 / 16)
+print(max_suprisal)
+
+for p in probs:
+    surprisal = -math.log(p) / max_suprisal
+    print(f"{p} -> {surprisal}")

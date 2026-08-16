@@ -1,7 +1,7 @@
 import re
 import numpy as np
 import pandas as pd
-from typing import List
+from typing import List, Tuple
 from app.candle import Candle
 
 _TOKEN_RE = re.compile(r"([OHLC])_(\d+)")
@@ -25,7 +25,7 @@ class ChartCodec:
         price = anchor_open + norm * self.scale * anchor_atr
         return price
     
-    def encode_window(self, window_df: pd.DataFrame, anchor_atr) -> List[Candle]:
+    def encode_window(self, window_df: pd.DataFrame, anchor_atr) -> Tuple[List[Candle], float]:
         max_high = window_df['High'].max()
         min_low = window_df['Low'].min()
         
@@ -41,6 +41,17 @@ class ChartCodec:
             candles.append(Candle(o, h, l, c))
             
         return candles, anchor_open
+    
+    def encode_window_with_anchor(self, window_df: pd.DataFrame, anchor_open, anchor_atr) -> List[Candle]:
+        candles = []
+        for _, row in window_df.iterrows():
+            o = self.quantize_price(row['Open'], anchor_open, anchor_atr)
+            h = self.quantize_price(row['High'], anchor_open, anchor_atr)
+            l = self.quantize_price(row['Low'], anchor_open, anchor_atr)
+            c = self.quantize_price(row['Close'], anchor_open, anchor_atr)
+            candles.append(Candle(o, h, l, c))
+            
+        return candles
     
     def decode_window(self, text: str, anchor_open, anchor_atr) -> str:
         buckets = {"O": [], "H": [], "L": [], "C": []}
