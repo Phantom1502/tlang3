@@ -257,6 +257,7 @@ def main(
         "val": f"{input_dir}/slide_window_200_val.parquet"
     }
     dataset = load_dataset("parquet", data_files=data_files)
+    dataset_builder = DatasetBuilder(cfg, seed=seed)
     
     def preprocess_for_llm(batch):
         prompts = []
@@ -273,7 +274,6 @@ def main(
             future_window = np.array(batch["future_window"][i], dtype=np.float32)
             atr_100 = batch["atr_100"][i]
             
-            dataset_builder = DatasetBuilder(cfg, seed=seed)
             records = dataset_builder.build_rows(symbol, input_window, future_window, atr_100, n_augments=n_augments)
                         
             for record in records:
