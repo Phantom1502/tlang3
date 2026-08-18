@@ -14,3 +14,5 @@ app/training/reward/__pycache__/
 app/__pycache__/
 data/re_aug_grpo/
 app/inference/__pycache__/
+data/raw/
+data/slide_window/

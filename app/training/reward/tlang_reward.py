@@ -8,7 +8,9 @@ from enum import Enum
 from collections import defaultdict, Counter
 
 from app.config.schema import AppConfig, RoundConfig
-from app.candle import Candle
+from tlang import (
+    CandleNode,
+)
 from app.lang.ast_nodes import ProgramNode, ZoneNode
 from app.lang.parser import Parser, ParseResult
 from app.lang.semantic import SemanticChecker, SemanticResult
@@ -76,7 +78,7 @@ class ZoneTaskScore:
 def measure_max_favorable_r(
     entry_bin: int,
     sl_bin: int,
-    future_candles: List[Candle],
+    future_candles: List[CandleNode],
     direction: str,
     outcome_horizon: int,
     cap: float,
@@ -106,7 +108,7 @@ def measure_max_favorable_r(
     return max_r
 
 
-def _find_first_touch(zone: ZoneNode, candles: List[Candle]) -> Optional[int]:
+def _find_first_touch(zone: ZoneNode, candles: List[CandleNode]) -> Optional[int]:
     """Index nến ĐẦU TIÊN có [low,high] giao với [zone.lower_bin,
     zone.upper_bin] — None nếu không nến nào chạm trong toàn bộ `candles`
     (caller đã cắt đúng outcome_horizon trước khi truyền vào)."""
@@ -118,7 +120,7 @@ def _find_first_touch(zone: ZoneNode, candles: List[Candle]) -> Optional[int]:
 
 def probe_zone_quality(
     zone: ZoneNode,
-    future_candles: List[Candle],
+    future_candles: List[CandleNode],
     outcome_horizon: int,
     cap: float,
 ) -> ForwardTestResult:
@@ -219,14 +221,13 @@ class TLangReward:
 
     def zone_score(
         self,
-        program: ProgramNode,
-        future_bins: Sequence[Sequence[int]],
+        zone: ZoneNode,
+        future_bins: List[CandleNode],
     ) -> ZoneTaskScore:
         """Đo chất lượng zone qua probe_zone_quality(). CHỈ gọi khi
         common_check() đã pass (caller — compute_reward — chịu trách nhiệm
         đảm bảo điều này, hàm này không tự check lại passed)."""
-        think = program.think
-        if think.zone is None:
+        if zone is None:
             return ZoneTaskScore(
                 zone_quality=self.cfg.base.no_zone_reward * self.cfg.base.zone_score_weight, 
                 probe=None, 
@@ -234,10 +235,9 @@ class TLangReward:
                 is_touched=None
             )
 
-        future_candles: List[Candle] = [Candle(*b) for b in future_bins]
         probe: ForwardTestResult = probe_zone_quality(
-            think.zone,
-            future_candles,
+            zone,
+            future_bins,
             outcome_horizon=self.cfg.window.outcome_horizon,
             cap=self.cfg.base.rr_max,
         )
@@ -256,7 +256,7 @@ class TLangReward:
             is_touched=True
         )
 
-    def compute_reward(self, prompt: Any, completion: str, future_bins: Sequence[Sequence[int]]) -> Tuple[float, TaskRolloutMeta]:
+    def compute_reward(self, prompt: Any, completion: str, future_bins: List[CandleNode]) -> Tuple[float, TaskRolloutMeta]:
         reward = 0.0
 
         parse_result: ParseResult = Parser.from_text(self.cfg, prompt + " " + completion).parse()
@@ -278,7 +278,7 @@ class TLangReward:
                 self.stats_collector.log(meta)
             return reward, meta
 
-        zone_score: ZoneTaskScore = self.zone_score(program, future_bins)
+        zone_score: ZoneTaskScore = self.zone_score(program.think.zone, future_bins)
         reward = reward + zone_score.zone_quality
 
         meta = TaskRolloutMeta(
@@ -309,10 +309,11 @@ class TLangReward:
         metas: List[Optional[TaskRolloutMeta]] = [None] * n
         
         for i in range(n):
+            future_candles: List[CandleNode] = [CandleNode(*b) for b in future_bins[i]]
             reward, meta = self.compute_reward(
                 prompts[i], 
                 completions[i], 
-                future_bins[i]
+                future_candles
             )
             rewards[i] = reward
             metas[i] = meta
