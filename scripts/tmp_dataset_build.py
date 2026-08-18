@@ -235,6 +235,13 @@ class DatasetBuilder:
         return rows
                 
     
+import re
+
+def extract_symbol(s):
+    # Tìm chuỗi dạng: 6 chữ cái + _ + số + chữ (ví dụ EURUSD_1Min)
+    match = re.search(r'[A-Z]{6}_\w+', s)
+    return match.group(0) if match else s
+
 def main(
     cfg: AppConfig, 
     input_dir: str,
@@ -257,11 +264,11 @@ def main(
         future_bins_list = []
         symbols = []
         
-        batch_size = len(batch["prompt"])
+        batch_size = len(batch["symbol"])
         
         # Duyệt qua các phần tử trong batch (chạy trong RAM của batch đó, cực nhẹ)
         for i in range(batch_size):
-            symbol = batch["symbol"][i]
+            symbol = extract_symbol(batch["symbol"][i])
             input_window = np.array(batch["input_window"][i], dtype=np.float32)
             future_window = np.array(batch["future_window"][i], dtype=np.float32)
             atr_100 = batch["atr_100"][i]
