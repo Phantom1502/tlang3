@@ -98,7 +98,7 @@ class DatasetBuilder:
         self.ast_visitor = ASTVisitor(digit_pad=self.cfg.base.digit_pad)
         
         # Read scale file text and create dict scale
-        scale_file = "data/preprocessed/train/scale_factor.txt"
+        scale_file = "scripts/scale_factor.txt"
         self.scale = {}
 
         with open(scale_file, "r", encoding="utf-8") as f:
@@ -219,7 +219,7 @@ class DatasetBuilder:
                 aug_scales = [0.8, 0.9, 1.1, 1.2]
                 
             for _ in range(n_augments):
-                aug_scale = self.rng.choice(aug_scales) * scale
+                aug_scale = self.rng.choice(aug_scales) / scale
                 aug_programs, aug_future_candles = self._build_a_program(aug_scale, input_window, future_window, atr_100)
                 for aug_program in aug_programs:
                     prompt = self.ast_visitor.render_chart_block(aug_program.chart.candles)
@@ -294,7 +294,7 @@ def main(
         preprocess_for_llm,
         batched=True,
         batch_size=2000, # Mỗi lần nạp 2000 dòng vào RAM để parse
-        num_proc=4,      # Số lượng nhân CPU chạy song song
+        num_proc=2,      # Số lượng nhân CPU chạy song song
         remove_columns=dataset["train"].column_names # Xóa các cột gốc (id, type, score...) để thu gọn dataset
     )
     
