@@ -119,7 +119,7 @@ def make_data_module(
         #train_dataset = dataset[data_args.train_split]
         return {
             "train_dataset": train_dataset,
-            "eval_dataset": dataset[data_args.eval_split].select(range(min(1000, len(dataset[data_args.eval_split])))),
+            #"eval_dataset": dataset[data_args.eval_split],
             "data_collator": DataCollatorForCoT(
                 tokenizer=tokenizer, is_pretrain=is_pretrain, max_length=data_args.max_length,
             ),
