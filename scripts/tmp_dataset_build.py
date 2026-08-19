@@ -250,7 +250,7 @@ def main(
     n_augments = 2,
 ):
     from datasets import load_dataset
-    import hashlib
+    import os
 
     data_files = {
         "train": f"{input_dir}/window_200_train_*.parquet",
@@ -294,7 +294,7 @@ def main(
         preprocess_for_llm,
         batched=True,
         batch_size=2000, # Mỗi lần nạp 2000 dòng vào RAM để parse
-        num_proc=2,      # Số lượng nhân CPU chạy song song
+        num_proc=os.cpu_count(),      # Số lượng nhân CPU chạy song song
         remove_columns=dataset["train"].column_names # Xóa các cột gốc (id, type, score...) để thu gọn dataset
     )
     
