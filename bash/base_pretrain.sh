@@ -15,8 +15,8 @@ set -euo pipefail
 
 python -m app.training.train_pretrain \
     --model_size base \
-    --dataset_name "sullivan1502/zone-pretrain-ids-data" \
-    --dataset_mode pre_tokenized \
+    --dataset_name "sullivan1502/zone-pretrain" \
+    --dataset_mode on_the_fly \
     --cache_dir "./cache" \
     \
     --output_dir "./output/base_pretrain" \
