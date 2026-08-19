@@ -253,8 +253,8 @@ def main(
     import hashlib
 
     data_files = {
-        "train": f"{input_dir}/slide_window_200_train.parquet",
-        "val": f"{input_dir}/slide_window_200_val.parquet"
+        "train": f"{input_dir}/window_200_train_*.parquet",
+        "val": f"{input_dir}/window_200_val.parquet"
     }
     dataset = load_dataset("parquet", data_files=data_files)
     dataset_builder = DatasetBuilder(cfg, seed=seed)
