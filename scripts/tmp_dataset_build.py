@@ -295,6 +295,7 @@ def main(
         batched=True,
         batch_size=2000, # Mỗi lần nạp 2000 dòng vào RAM để parse
         num_proc=4,      # Số lượng nhân CPU chạy song song
+        keep_in_memory=True,
         remove_columns=dataset["train"].column_names # Xóa các cột gốc (id, type, score...) để thu gọn dataset
     )
     
