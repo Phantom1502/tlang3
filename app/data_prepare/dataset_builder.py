@@ -205,6 +205,9 @@ class DatasetBuilder:
         input_window: np.ndarray,
         future_window: np.ndarray,
         atr_100: float,
+        trend_threshhold: float = 0.6,
+        hold_threshhold: float = 0.3,
+        swing_window: int = 5,
     ):
         symbol = symbol_timeframe.split("_")[0]
         timeframe = symbol_timeframe.split("_")[1]
@@ -215,9 +218,9 @@ class DatasetBuilder:
             input_window=input_window,
             future_window=future_window,
             atr_100=atr_100,
-            trend_threshhold=0.6,
-            hold_threshhold=0.3,
-            swing_window=5,
+            trend_threshhold=trend_threshhold,
+            hold_threshhold=hold_threshhold,
+            swing_window=swing_window,
             is_noise=True
         )
         
@@ -240,6 +243,9 @@ def build_pretrain_dataset(
     input_dir: str,
     output_dir: str,
     seed: Optional[int] = None,
+    trend_threshhold: float = 0.6,
+    hold_threshhold: float = 0.3,
+    swing_window: int = 5,
 ):
     from datasets import load_dataset
     import os
@@ -269,7 +275,10 @@ def build_pretrain_dataset(
                 symbol, 
                 input_window, 
                 future_window, 
-                atr_100
+                atr_100,
+                trend_threshhold=trend_threshhold,
+                hold_threshhold=hold_threshhold,
+                swing_window=swing_window
             )
                         
             for record in records:
