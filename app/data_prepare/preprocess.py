@@ -19,21 +19,21 @@ class Preprocess:
         return atr
     
     @staticmethod
-    def preprocess(csv_path: str, output_path: str, period=100):
+    def preprocess(csv_path: str, output_path: str, window: int = 100, atr_period: int = 100) -> None:
         df = pd.read_csv(csv_path)
         df = df[['Datetime', 'Open', 'High', 'Low', 'Close']]
         
         # 1. Tính ATR
-        df['ATR_100'] = Preprocess.calculate_atr(df, period)
+        df['ATR_100'] = Preprocess.calculate_atr(df, atr_period)
         df = df.dropna().reset_index(drop=True)
         
         # 2. Vectorization: Dùng rolling() thay cho vòng lặp for i in range(...)
         # High max và Low min trong window=100 nến
-        rolling_high = df['High'].rolling(window=period, min_periods=1).max()
-        rolling_low = df['Low'].rolling(window=period, min_periods=1).min()
+        rolling_high = df['High'].rolling(window=window, min_periods=1).max()
+        rolling_low = df['Low'].rolling(window=window, min_periods=1).min()
         
         # Range với 20% padding
-        window_range = (rolling_high - rolling_low) * 1.2
+        window_range = (rolling_high - rolling_low)
         
         # Tính tỉ lệ ratio
         ratios = window_range / df['ATR_100']
@@ -56,23 +56,31 @@ class Preprocess:
         scale_factor_file = os.path.join(output_path, "scale_factor.txt")
         with open(scale_factor_file, 'a') as f:
             f.write(f"{filename}: {FINAL_SCALE_FACTOR:.2f}\n")
-
-def preprocess_folder(folder_path: str, output_path: str, atr_period=100):
-    csv_files = glob.glob(os.path.join(folder_path, "*.csv"))
-    for csv_file in csv_files:
-        Preprocess.preprocess(csv_file, output_path, atr_period)
             
 def preprocess_folder(
     folder_path: str, 
     output_path: str,
-    atr_period=100
+    window: int = 100, 
+    atr_period: int = 100
 ):
     csv_files = glob.glob(os.path.join(folder_path, "*.csv"))
     for csv_file in csv_files:
-        Preprocess.preprocess(csv_file, output_path, atr_period)
+        Preprocess.preprocess(csv_file, output_path, window, atr_period)
         
 if __name__ == "__main__":
+    from app.config import AppConfig, load_config
+    cfg: AppConfig = load_config("configs")
     # preprocess train data
-    preprocess_folder("./data/raw/train", "./data/preprocessed/train")
+    preprocess_folder(
+        "./data/raw/train", 
+        "./data/preprocessed/train",
+        window=cfg.window.input_candles,
+        atr_period=100
+    )
     # preprocess val data
-    preprocess_folder("./data/raw/val", "./data/preprocessed/val")
+    preprocess_folder(
+        "./data/raw/val", 
+        "./data/preprocessed/val",
+        window=cfg.window.input_candles,
+        atr_period=100
+    )
