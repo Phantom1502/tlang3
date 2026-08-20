@@ -19,6 +19,7 @@ from tlang import (
 from collections import Counter
 
 def find_truly_valid_zones(
+    last_n_candles: List[CandleNode],
     future_candles: List[CandleNode],
     mode: Literal["support", "resistance"] = "support",
     swing_window: int = 2,
@@ -37,7 +38,9 @@ def find_truly_valid_zones(
     :return: List các Tuple (future_idx, lower_bin, upper_bin)
     """
     valid_zones = []
-    n = len(future_candles)
+    last_n = len(last_n_candles)
+    candles = last_n_candles + future_candles
+    n = len(candles)
     
     if n == 0:
         return valid_zones
@@ -51,13 +54,13 @@ def find_truly_valid_zones(
         right_end = min(n - 1, i + swing_window)
 
         if is_support:
-            current_val = future_candles[i].low
+            current_val = candles[i].low
             # Là Swing Low nếu giá Low hiện tại <= tất cả các nến trong cửa sổ xung quanh
-            is_swing = all(current_val <= future_candles[j].low for j in range(left_start, right_end + 1) if j != i)
+            is_swing = all(current_val <= candles[j].low for j in range(left_start, right_end + 1) if j != i)
         else:
-            current_val = future_candles[i].high
+            current_val = candles[i].high
             # Là Swing High nếu giá High hiện tại >= tất cả các nến trong cửa sổ xung quanh
-            is_swing = all(current_val >= future_candles[j].high for j in range(left_start, right_end + 1) if j != i)
+            is_swing = all(current_val >= candles[j].high for j in range(left_start, right_end + 1) if j != i)
 
         if not is_swing:
             continue
@@ -74,17 +77,18 @@ def find_truly_valid_zones(
         # 3. PRISTINE CHECK (Kiểm tra tính Khả dụng từ t=0 đến i-1)
         # Bỏ qua các Zone đã bị chạm/xuyên qua bởi các nến đứng trước
         is_available = True
-        for prev_idx in range(i):
-            if is_support:
-                # Với Support Zone: Lệnh Limit Mua bị kích hoạt sớm nếu có nến trước đó đâm thủng Edge Trên (upper_bin)
-                if future_candles[prev_idx].low <= upper_bin:
-                    is_available = False
-                    break
-            else:
-                # Với Resistance Zone: Lệnh Limit Bán bị kích hoạt sớm nếu có nến trước đó vượt qua Edge Dưới (lower_bin)
-                if future_candles[prev_idx].high >= lower_bin:
-                    is_available = False
-                    break
+        if i - last_n > 0:
+            for prev_idx in range(i - last_n):
+                if is_support:
+                    # Với Support Zone: Lệnh Limit Mua bị kích hoạt sớm nếu có nến trước đó đâm thủng Edge Trên (upper_bin)
+                    if future_candles[prev_idx].low <= upper_bin:
+                        is_available = False
+                        break
+                else:
+                    # Với Resistance Zone: Lệnh Limit Bán bị kích hoạt sớm nếu có nến trước đó vượt qua Edge Dưới (lower_bin)
+                    if future_candles[prev_idx].high >= lower_bin:
+                        is_available = False
+                        break
 
         if is_available:
             valid_zones.append((i, lower_bin, upper_bin, upper_bin - lower_bin))
