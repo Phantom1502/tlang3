@@ -115,7 +115,7 @@ class DatasetBuilder:
         swing_window: int = 5,
         is_noise: bool = True
     )-> List[ProgramNode]:
-        last_n_candles = chart.candles[-self.cfg.base.last_n_candles:]
+        last_n_candles = chart.candles[-self.cfg.base.zone_last_n_touch:]
         results: List[ProgramNode] = []
         reward = TLangReward(self.cfg)
         noise = 0
