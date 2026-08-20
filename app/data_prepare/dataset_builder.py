@@ -179,8 +179,8 @@ class DatasetBuilder:
         input_window: np.ndarray,
         future_window: np.ndarray,
         atr_100: float,
-        trend_threshhold: float = 0.4,
-        hold_threshhold: float = 0.2,
+        trend_threshhold: float = 0.6,
+        hold_threshhold: float = 0.3,
         swing_window: int = 5,
         is_noise: bool = True
     ) -> List[ProgramNode]:
