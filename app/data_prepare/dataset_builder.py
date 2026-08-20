@@ -160,6 +160,7 @@ class DatasetBuilder:
                     )
                     self.counter[f"{program.think.trend}_{program.think.zone.direction}"] += 1
                     results.append(program)
+                    
         if len(results) == 0:
             program: ProgramNode = ProgramNode(
                 chart=chart,
