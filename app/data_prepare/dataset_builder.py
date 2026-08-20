@@ -155,7 +155,7 @@ class DatasetBuilder:
                         )
                     )
                     results.append(program)
-        if len(results) > 0:
+        if len(results) == 0:
             program: ProgramNode = ProgramNode(
                 chart=chart,
                 think=ThinkNode(
