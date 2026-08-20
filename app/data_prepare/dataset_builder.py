@@ -16,6 +16,8 @@ from tlang import (
     ZoneNode
 )
 
+from collections import Counter
+
 def find_truly_valid_zones(
     future_candles: List[CandleNode],
     mode: Literal["support", "resistance"] = "support",
@@ -98,6 +100,7 @@ class DatasetBuilder:
         self.cfg = cfg
         self.rng = random.Random(seed)
         self.ast_visitor = ASTVisitor(digit_pad=self.cfg.base.digit_pad)
+        self.counter = Counter()
         
     def _find_zone(
         self,
@@ -144,6 +147,7 @@ class DatasetBuilder:
                             zone=zone
                         )
                     )
+                    self.counter[f"{program.think.trend}_{program.think.zone.direction}"] += 1
                     results.append(program)
                 elif score.zone_quality > hold_threshhold:
                     program: ProgramNode = ProgramNode(
@@ -154,6 +158,7 @@ class DatasetBuilder:
                             zone=zone
                         )
                     )
+                    self.counter[f"{program.think.trend}_{program.think.zone.direction}"] += 1
                     results.append(program)
         if len(results) == 0:
             program: ProgramNode = ProgramNode(
@@ -163,6 +168,7 @@ class DatasetBuilder:
                     current_price_bin=chart.current_price,
                 )
             )
+            self.counter[f"{program.think.trend}_NOZONE"] += 1
             results.append(program)
         return results
     
@@ -269,6 +275,9 @@ def build_pretrain_dataset(
                 prompts.append(record["prompt"])
                 completions.append(record["completion"])
                 symbols.append(record["symbol"])
+                
+            print(f"Processed {i}/{batch_size}\n")
+            print(dataset_builder.counter)
                 
         # Trả về các cột mới cho Dataset LLM
         return {
