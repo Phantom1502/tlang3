@@ -1,63 +1,63 @@
 - symbol: XAUUSD
   timeframe: M1
-  scale: 23.95
+  scale: 30.35
 - symbol: XAUUSD
   timeframe: M5
-  scale: 27.38
+  scale: 31.01
 - symbol: XAUUSD
   timeframe: M15
-  scale: 24.74
+  scale: 30.26
 - symbol: XAUUSD
   timeframe: H1
-  scale: 22.81
+  scale: 28.60
 - symbol: XAUUSD
   timeframe: Daily
-  scale: 11.82
+  scale: 17.82
 - symbol: AUDUSD
   timeframe: M1
-  scale: 27.19
+  scale: 33.82
 - symbol: AUDUSD
   timeframe: M5
-  scale: 27.24
+  scale: 29.78
 - symbol: AUDUSD
   timeframe: M15
-  scale: 23.73
+  scale: 27.37
 - symbol: AUDUSD
   timeframe: H1
-  scale: 20.18
+  scale: 22.92
 - symbol: EURUSD
   timeframe: M1
-  scale: 26.83
+  scale: 32.49
 - symbol: EURUSD
   timeframe: M5
-  scale: 28.12
+  scale: 30.67
 - symbol: EURUSD
   timeframe: M15
-  scale: 25.50
+  scale: 28.64
 - symbol: EURUSD
   timeframe: H1
-  scale: 22.96
+  scale: 25.92
 - symbol: GBPUSD
   timeframe: M1
-  scale: 26.89
+  scale: 31.59
 - symbol: GBPUSD
   timeframe: M5
-  scale: 26.50
+  scale: 28.38
 - symbol: GBPUSD
   timeframe: M15
-  scale: 25.32
+  scale: 27.88
 - symbol: GBPUSD
   timeframe: H1
-  scale: 22.15
+  scale: 26.37
 - symbol: US500
   timeframe: M1
-  scale: 30.20
+  scale: 33.42
 - symbol: US500
   timeframe: M5
-  scale: 32.12
+  scale: 34.45
 - symbol: US500
   timeframe: M15
-  scale: 27.86
+  scale: 31.93
 - symbol: US500
   timeframe: H1
-  scale: 26.47
+  scale: 26.39
