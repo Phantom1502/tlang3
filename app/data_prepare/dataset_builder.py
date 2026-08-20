@@ -215,8 +215,8 @@ class DatasetBuilder:
             input_window=input_window,
             future_window=future_window,
             atr_100=atr_100,
-            trend_threshhold=0.4,
-            hold_threshhold=0.2,
+            trend_threshhold=0.6,
+            hold_threshhold=0.3,
             swing_window=5,
             is_noise=True
         )
