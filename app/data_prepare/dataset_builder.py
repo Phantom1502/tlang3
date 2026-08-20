@@ -115,6 +115,7 @@ class DatasetBuilder:
         swing_window: int = 5,
         is_noise: bool = True
     )-> List[ProgramNode]:
+        last_n_candles = chart.candles[-self.cfg.base.last_n_candles:]
         results: List[ProgramNode] = []
         reward = TLangReward(self.cfg)
         noise = 0
@@ -122,6 +123,7 @@ class DatasetBuilder:
             noise = int((self.cfg.base.zone_width_max_bins - self.cfg.base.zone_width_min_bins)/3)
         for zone_direction in ["support", "resistance"]:
             zones = find_truly_valid_zones(
+                last_n_candles,
                 future_candles,
                 zone_direction,
                 swing_window = swing_window,
