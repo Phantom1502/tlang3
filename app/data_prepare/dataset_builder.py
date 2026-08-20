@@ -277,8 +277,7 @@ def build_pretrain_dataset(
                 completions.append(record["completion"])
                 symbols.append(record["symbol"])
                 
-            print(f"Processed {i}/{batch_size}\n")
-            print(dataset_builder.counter)
+        print(dataset_builder.counter)
                 
         # Trả về các cột mới cho Dataset LLM
         return {
