@@ -486,7 +486,7 @@ def build_grpo_dataset(
             future_window = np.array(batch["future_window"][i], dtype=np.float32)
             atr_100 = batch["atr_100"][i]
             
-            records = dataset_builder.build_pretrain_rows(
+            records = dataset_builder.build_grpo_rows(
                 symbol, 
                 input_window, 
                 future_window, 
