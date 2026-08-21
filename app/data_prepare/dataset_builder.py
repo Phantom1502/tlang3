@@ -486,7 +486,7 @@ def build_grpo_dataset(
             future_window = np.array(batch["future_window"][i], dtype=np.float32)
             atr_100 = batch["atr_100"][i]
             
-            records = dataset_builder.build_grpo_rows(
+            record = dataset_builder.build_grpo_rows(
                 symbol, 
                 input_window, 
                 future_window, 
@@ -496,13 +496,12 @@ def build_grpo_dataset(
                 swing_window=swing_window
             )
                         
-            for record in records:
-                prompts.append(record["prompt"])
-                future_bins.append(record["future_bins"])
-                trends.append(record["trend"])
-                zones.append(record["zone"])
-                zone_ranges.append(record["zone_range"])
-                symbols.append(record["symbol"])
+            prompts.append(record["prompt"])
+            future_bins.append(record["future_bins"])
+            trends.append(record["trend"])
+            zones.append(record["zone"])
+            zone_ranges.append(record["zone_range"])
+            symbols.append(record["symbol"])
                 
         print(dataset_builder.counter)
                 
