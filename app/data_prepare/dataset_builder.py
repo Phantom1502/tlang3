@@ -359,14 +359,14 @@ class DatasetBuilder:
                 min_idx, best_quality, best_program = min(results, key=lambda x: (x[0], -x[1]))
         
         if best_program is None:
-            program: ProgramNode = ProgramNode(
+            best_program: ProgramNode = ProgramNode(
                 chart=chart,
                 think=ThinkNode(
                     trend="RANGE",
                     current_price_bin=chart.current_price,
                 )
             )
-            self.counter[f"{program.think.trend}_NOZONE"] += 1
+            self.counter[f"{best_program.think.trend}_NOZONE"] += 1
         else:
             self.counter[f"{best_program.think.trend}_{best_program.think.zone.direction}"] += 1
 
