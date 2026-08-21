@@ -527,8 +527,8 @@ def build_grpo_dataset(
     import os
     os.makedirs(output_dir, exist_ok=True)
     
-    llm_dataset["train"].shuffle(seed=seed).to_parquet(f"{output_dir}/train_pretrain.parquet")
-    llm_dataset["val"].to_parquet(f"{output_dir}/val_pretrain.parquet") 
+    llm_dataset["train"].shuffle(seed=seed).to_parquet(f"{output_dir}/train_grpo.parquet")
+    llm_dataset["val"].to_parquet(f"{output_dir}/val_grpo.parquet") 
     
 if __name__ == "__main__":
     cfg: AppConfig = load_config("configs")
