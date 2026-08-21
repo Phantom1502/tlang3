@@ -17,3 +17,4 @@ app/inference/__pycache__/
 data/raw/
 data/slide_window/
 data/dataset/
+.vscode/

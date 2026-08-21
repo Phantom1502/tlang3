@@ -67,3 +67,6 @@ class ModelInference:
 
         gen_ids = out_ids[:, input_ids.shape[1]:]
         return self.tok.batch_decode(gen_ids, skip_special_tokens=True)
+    
+    def generate_samples(self, prompt: str, n_samples: int) -> List[str]:
+        return self.generate_batch([{"prompt": prompt} for _ in range(n_samples)])
