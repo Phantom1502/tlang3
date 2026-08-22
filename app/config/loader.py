@@ -12,7 +12,7 @@ import os
 from typing import Any, Dict
 
 import yaml
-
+from tlang import TLangConfig
 from app.config.schema import (
     AppConfig,
     BaseConfig,
@@ -33,6 +33,7 @@ _REQUIRED_TOP_LEVEL_FILES = (
     "scales.yaml",
     "models.yaml",
     "training_defaults.yaml",
+    "tlang.yaml",
 )
 _ROUNDS_SUBDIR = "rounds"
 
@@ -52,15 +53,8 @@ def _require_field(data: Dict[str, Any], key: str, source: str) -> Any:
 
 def _build_base_config(data: Dict[str, Any], source: str) -> BaseConfig:
     return BaseConfig(
-        bin_min=_require_field(data, "bin_min", source),
-        bin_max=_require_field(data, "bin_max", source),
-        n_bins=_require_field(data, "n_bins", source),
-        zone_width_min_bins=_require_field(data, "zone_width_min_bins", source),
-        zone_width_max_bins=_require_field(data, "zone_width_max_bins", source),
         zone_score_weight=_require_field(data, "zone_score_weight", source),
         no_zone_reward=_require_field(data, "no_zone_reward", source),
-        zone_last_n_touch=_require_field(data, "zone_last_n_touch", source),
-        digit_pad=_require_field(data, "digit_pad", source),
         rr_min=_require_field(data, "rr_min", source),
         rr_max=_require_field(data, "rr_max", source),
         action_types=tuple(_require_field(data, "action_types", source)),
@@ -133,6 +127,18 @@ def _build_training_config(data: Dict[str, Any], source: str) -> TrainingConfig:
     
     return train_cfgs
 
+def _build_tlang_config(data: Dict[str, Any], source: str, mode: str = "zone") -> TLangConfig:
+    return TLangConfig(
+        expected_candle_count=_require_field(data, "expected_candle_count", source),
+        n_bins=_require_field(data, "n_bins", source),
+        digit_pad=_require_field(data, "digit_pad", source),
+        zone_range=tuple(_require_field(data, "zone_range", source)),
+        sl_range=tuple(_require_field(data, "sl_range", source)),
+        zone_extend_multiplier=_require_field(data, "zone_extend_multiplier", source),
+        last_n_touch=_require_field(data, "last_n_touch", source),
+        mode=mode,
+    )
+    
 def _build_round_config(data: Dict[str, Any], source: str) -> RoundConfig:
     entropys_raw = _require_field(data, "entropys", source)
     entropys = {}
@@ -192,13 +198,15 @@ def load_config(config_dir: str = "./config") -> AppConfig:
     scales_data = _read_yaml(paths["scales.yaml"])
     models_data = _read_yaml(paths["models.yaml"])
     training_defaults_data = _read_yaml(paths["training_defaults.yaml"])
-
+    tlang_data = _read_yaml(paths["tlang.yaml"])
+    
     base = _build_base_config(base_data, paths["base.yaml"])
     window = _build_window_config(window_data, paths["window.yaml"])
     scales = _build_scale_entries(scales_data, paths["scales.yaml"])
     models = _build_models_config(models_data, paths["models.yaml"])
     training = _build_training_config(training_defaults_data, paths["training_defaults.yaml"])
-
+    tlang_zone = _build_tlang_config(tlang_data, paths["tlang.yaml"], mode="zone")
+    
     rounds: Dict[str, RoundConfig] = {}
     for round_filename in round_files:
         round_path = os.path.join(rounds_dir, round_filename)
@@ -213,6 +221,7 @@ def load_config(config_dir: str = "./config") -> AppConfig:
         models=models,
         training_defaults=training,
         rounds=rounds,
+        tlang_zone=tlang_zone,
     )
 
 

@@ -145,7 +145,17 @@ if __name__ == "__main__":
     from app.config.schema import AppConfig
 
     cfg: AppConfig = load_config("configs")
-    vocab = build_vocab(cfg.base.bin_min, cfg.base.bin_max, cfg.base.rr_min, cfg.base.rr_max)
-    print(describe_vocab(cfg.base.bin_min, cfg.base.bin_max, cfg.base.rr_min, cfg.base.rr_max))
+    vocab = build_vocab(
+        cfg.tlang_zone.bin_range[0], 
+        cfg.tlang_zone.bin_range[1], 
+        cfg.base.rr_min, 
+        cfg.base.rr_max
+    )
+    print(describe_vocab(        
+            cfg.tlang_zone.bin_range[0], 
+            cfg.tlang_zone.bin_range[1], 
+            cfg.base.rr_min, 
+            cfg.base.rr_max
+    ))
     print(f"\nlen(build_vocab()) = {len(vocab)}")
     assert len(vocab) == len(set(vocab.values())), "id bị trùng — bug trong build_vocab()"

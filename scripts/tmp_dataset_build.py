@@ -95,7 +95,7 @@ class DatasetBuilder:
     def __init__(self, cfg: AppConfig, seed: Optional[int] = None) -> None:
         self.cfg = cfg
         self.rng = random.Random(seed)
-        self.ast_visitor = ASTVisitor(digit_pad=self.cfg.base.digit_pad)
+        self.ast_visitor = ASTVisitor(digit_pad=self.cfg.tlang_zone.digit_pad)
         
         # Read scale file text and create dict scale
         scale_file = "scripts/scale_factor.txt"
@@ -118,13 +118,13 @@ class DatasetBuilder:
     )-> List[ProgramNode]:
         results: List[ProgramNode] = []
         reward = TLangReward(self.cfg)
-        noise = int((self.cfg.base.zone_width_max_bins - self.cfg.base.zone_width_min_bins)/3)
+        noise = int((self.cfg.tlang_zone.zone_range[1] - self.cfg.tlang_zone.zone_range[0])/3)
         for mode, zone_direction in [("support", "UP"), ("resistance", "DOWN")]:
             zones = find_truly_valid_zones(
                 future_candles,
                 mode,
                 swing_window = 5,
-                zone_width = self.cfg.base.zone_width_min_bins,      # Hard Config Range Min
+                zone_width = self.cfg.tlang_zone.zone_range[0],      # Hard Config Range Min
                 noise = noise,
                 max_bin = self.cfg.base.bin_max,
             )
@@ -177,7 +177,7 @@ class DatasetBuilder:
         future_window: np.ndarray,
         atr_100: float,
     ) -> List[ProgramNode]:
-        codec = ChartCodec(scale=scale, n_bins=self.cfg.base.n_bins)
+        codec = ChartCodec(scale=scale, n_bins=self.cfg.tlang_zone.n_bins)
         input_candles, open_anchor = codec._encode_input(input_window, atr_100)
         future_candles = codec._encode_future(future_window, open_anchor, atr_100)
         chart = ChartNode(candles=input_candles)
@@ -211,9 +211,9 @@ class DatasetBuilder:
             chart_high = max(c.high for c in chart.candles)
             chart_low = min(c.low for c in chart.candles)
             chart_range = chart_high - chart_low
-            if chart_range < self.cfg.base.n_bins * 0.5:
+            if chart_range < self.cfg.tlang_zone.n_bins * 0.5:
                 aug_scales = [1.1, 1.2, 1.3, 1.4]
-            elif chart_range > self.cfg.base.n_bins * 0.8:
+            elif chart_range > self.cfg.tlang_zone.n_bins * 0.8:
                 aug_scales = [0.9, 0.8, 0.7, 0.6]
             else:
                 aug_scales = [0.8, 0.9, 1.1, 1.2]

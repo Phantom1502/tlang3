@@ -74,7 +74,12 @@ def build_raw_tokenizer(bin_min: int, bin_max: int, rr_min: int, rr_max: int) ->
 
 def build_fast_tokenizer() -> PreTrainedTokenizerFast:
     cfg: AppConfig = load_config("configs")
-    raw_tokenizer = build_raw_tokenizer(cfg.base.bin_min, cfg.base.bin_max, cfg.base.rr_min, cfg.base.rr_max)
+    raw_tokenizer = build_raw_tokenizer(
+        cfg.tlang_zone.bin_range[0], 
+        cfg.tlang_zone.bin_range[1], 
+        cfg.base.rr_min, 
+        cfg.base.rr_max
+    )
     fast = PreTrainedTokenizerFast(
         tokenizer_object=raw_tokenizer,
         unk_token=UNK_TOKEN,

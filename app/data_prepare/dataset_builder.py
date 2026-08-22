@@ -108,7 +108,7 @@ class DatasetBuilder:
     ):
         self.cfg = cfg
         self.rng = random.Random(seed)
-        self.ast_visitor = ASTVisitor(digit_pad=self.cfg.base.digit_pad)
+        self.ast_visitor = ASTVisitor(digit_pad=self.cfg.tlang_zone.digit_pad)
         self.counter = Counter()
         
     def _find_zone(
@@ -120,19 +120,19 @@ class DatasetBuilder:
         swing_window: int = 5,
         is_noise: bool = True
     )-> List[ProgramNode]:
-        last_n_candles = chart.candles[-self.cfg.base.zone_last_n_touch:]
+        last_n_candles = chart.candles[-self.cfg.tlang_zone.last_n_touch:]
         results: List[ProgramNode] = []
         reward = TLangReward(self.cfg)
         noise = 0
         if is_noise:
-            noise = int((self.cfg.base.zone_width_max_bins - self.cfg.base.zone_width_min_bins)/3)
+            noise = int((self.cfg.tlang_zone.zone_range[1] - self.cfg.tlang_zone.zone_range[0])/3)
         for zone_direction in ["support", "resistance"]:
             zones = find_truly_valid_zones(
                 last_n_candles,
                 future_candles,
                 zone_direction,
                 swing_window = swing_window,
-                zone_width = self.cfg.base.zone_width_min_bins,      # Hard Config Range Min
+                zone_width = self.cfg.tlang_zone.zone_range[0],      # Hard Config Range Min
                 noise = noise,
                 max_bin = self.cfg.base.bin_max,
             )
@@ -198,15 +198,15 @@ class DatasetBuilder:
         timeframe = symbol_timeframe.split("_")[1]
         scale = get_scale(self.cfg, symbol, timeframe)
         
-        codec = ChartCodec(scale=scale, n_bins=self.cfg.base.n_bins)
+        codec = ChartCodec(scale=scale, n_bins=self.cfg.tlang_zone.n_bins)
         input_candles, open_anchor = codec._encode_input(input_window, atr_100)
         future_candles = codec._encode_future(future_window, open_anchor, atr_100)
         chart = ChartNode(candles=input_candles)
         
-        last_n_candles = chart.candles[-self.cfg.base.zone_last_n_touch:]
+        last_n_candles = chart.candles[-self.cfg.tlang_zone.last_n_touch:]
         reward = TLangReward(self.cfg)
         
-        noise = int((self.cfg.base.zone_width_max_bins - self.cfg.base.zone_width_min_bins)/3)
+        noise = int((self.cfg.tlang_zone.zone_range[1] - self.cfg.tlang_zone.zone_range[0])/3)
         gen_programs: List[ProgramNode] = []
         for zone_direction in ["support", "resistance"]:
             zones = find_truly_valid_zones(
@@ -214,7 +214,7 @@ class DatasetBuilder:
                 future_candles,
                 zone_direction,
                 swing_window = swing_window,
-                zone_width = self.cfg.base.zone_width_min_bins,      # Hard Config Range Min
+                zone_width = self.cfg.tlang_zone.zone_range[0],      # Hard Config Range Min
                 noise = noise,
                 max_bin = self.cfg.base.bin_max,
             )
@@ -292,12 +292,12 @@ class DatasetBuilder:
         timeframe = symbol_timeframe.split("_")[1]
         scale = get_scale(self.cfg, symbol, timeframe)
         
-        codec = ChartCodec(scale=scale, n_bins=self.cfg.base.n_bins)
+        codec = ChartCodec(scale=scale, n_bins=self.cfg.tlang_zone.n_bins)
         input_candles, open_anchor = codec._encode_input(input_window, atr_100)
         future_candles = codec._encode_future(future_window, open_anchor, atr_100)
         chart = ChartNode(candles=input_candles)
         
-        last_n_candles = chart.candles[-self.cfg.base.zone_last_n_touch:]
+        last_n_candles = chart.candles[-self.cfg.tlang_zone.last_n_touch:]
         reward = TLangReward(self.cfg)
         
         results: List[Tuple[int, float, ProgramNode]] = []
@@ -307,7 +307,7 @@ class DatasetBuilder:
                 future_candles,
                 zone_direction,
                 swing_window = swing_window,
-                zone_width = self.cfg.base.zone_width_min_bins,      # Hard Config Range Min
+                zone_width = self.cfg.tlang_zone.zone_range[0],      # Hard Config Range Min
                 noise = 0,
                 max_bin = self.cfg.base.bin_max,
             )

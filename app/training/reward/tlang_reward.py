@@ -10,10 +10,14 @@ from collections import defaultdict, Counter
 from app.config.schema import AppConfig, RoundConfig
 from tlang import (
     CandleNode,
+    ProgramNode,
+    ZoneNode,
+    
+    Parser,
+    ParseResult,
+    SemanticChecker,
+    SemanticResult
 )
-from app.lang.ast_nodes import ProgramNode, ZoneNode
-from app.lang.parser import Parser, ParseResult
-from app.lang.semantic import SemanticChecker, SemanticResult
 from app.training.reward.stats_collector import StatsCollector, TaskRolloutMeta
 from app.training.reward.zone_entropy_controller import ZoneEntropyController, MIN_SAMPLES_PER_GROUP_FOR_ENTROPY
 
@@ -198,10 +202,7 @@ class TLangReward:
                 gate_score=parse_result.well_form_score(),
             )
 
-        semantic_result: SemanticResult = SemanticChecker(
-            zone_width_min_bins=self.cfg.base.zone_width_min_bins,
-            zone_width_max_bins=self.cfg.base.zone_width_max_bins,
-        ).check(program)
+        semantic_result: SemanticResult = SemanticChecker(self.cfg.tlang_zone).check(program)
         if not semantic_result.passed:
             return CommonGateResult(
                 program=program,

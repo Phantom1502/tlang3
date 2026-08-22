@@ -15,19 +15,12 @@ contract da dong bang o interfaces.md.
 
 from dataclasses import dataclass, field
 from typing import Dict, Tuple, List, Any
-
+from tlang import TLangConfig
 
 @dataclass(frozen=True)
 class BaseConfig:
-    bin_min: int
-    bin_max: int
-    n_bins: int
-    zone_width_min_bins: int
-    zone_width_max_bins: int
     zone_score_weight: float
     no_zone_reward: float
-    zone_last_n_touch: int
-    digit_pad: int
     rr_min: int
     rr_max: int
     action_types: Tuple[str, ...]  # 7 gia tri co dinh theo PRD 4.1.c
@@ -138,3 +131,4 @@ class AppConfig:
     models: ModelsConfig
     training_defaults: List[TrainingConfig]
     rounds: Dict[str, RoundConfig]
+    tlang_zone: TLangConfig

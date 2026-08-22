@@ -178,10 +178,7 @@ class ZoneInference:
             return ScoreResult(False, False, None, None, None), None
 
         program = parse_result.ast
-        semantic_result = SemanticChecker(
-            zone_width_min_bins=self.cfg.base.zone_width_min_bins,
-            zone_width_max_bins=self.cfg.base.zone_width_max_bins,
-        ).check(program)
+        semantic_result = SemanticChecker(self.cfg.tlang_zone).check(program)
         if not semantic_result.passed:
             return ScoreResult(True, False, None, None, None), None
 
@@ -209,7 +206,7 @@ class ZoneInference:
         chart: List[Candle] = [
             Candle(open=cn.o, high=cn.h, low=cn.l, close=cn.c) for cn in program.chart.candles
         ]
-        return _is_price_in_zone_now(chart, program.think.zone, last_n=self.cfg.base.zone_last_n_touch)
+        return _is_price_in_zone_now(chart, program.think.zone, last_n=self.cfg.tlang_zone.last_n_touch)
 
     # ------------------------------------------------------------------
     # Ghi parquet — 1 shard/lần flush, KHÔNG append vào file cũ.

@@ -94,7 +94,7 @@ class ZonePretrainGen:
             for symbol, timeframe, file in tqdm(inputs, desc="All Files", position=0):
                 print(f"Đang xử lý: {symbol} {timeframe}")
                 scale = get_scale(self.cfg, symbol, timeframe)
-                codec = ChartCodec(scale=scale, n_bins=self.cfg.base.n_bins)
+                codec = ChartCodec(scale=scale, n_bins=self.cfg.tlang_zone.n_bins)
                 
                 gen = ZonePretrainOneFileGen(
                     self.cfg, codec, self.builder, file, 
